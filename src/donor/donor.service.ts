@@ -164,5 +164,6 @@ export class DonorService {
   
   private parseLastDonationDate(lastDonation: string): Date {
     return new Date(lastDonation);
+
   }
 }
