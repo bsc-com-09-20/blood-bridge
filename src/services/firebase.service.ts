@@ -1,16 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as admin from 'firebase-admin';
-import * as serviceAccount from '../config/serviceAccountKey.json'; // Path to your Firebase service account key
+import * as dotenv from 'dotenv';
+
+dotenv.config(); 
 
 @Injectable()
-export class FirebaseService {
+export class FirebaseService implements OnModuleInit {
   private firestore: admin.firestore.Firestore;
 
-  constructor() {
+  onModuleInit() {
     // Initialize Firebase Admin SDK
     if (!admin.apps.length) {
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        } as admin.ServiceAccount),
       });
     }
 
@@ -32,3 +38,45 @@ export class FirebaseService {
     return admin.auth().verifyIdToken(token);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
