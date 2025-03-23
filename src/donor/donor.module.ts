@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { DonorService } from './donor.service';
-import { DonorController } from './donor.controller';
+import { DonorsController } from './donors.controller';
+import { DonorsService } from './donors.service';
+import { FirebaseService } from '../services/firebase.service';
 
 @Module({
-  controllers: [DonorController],
-  providers: [DonorService],
+  controllers: [DonorsController],
+  providers: [DonorsService, FirebaseService],
 })
-export class DonorModule {}
+export class DonorsModule {}

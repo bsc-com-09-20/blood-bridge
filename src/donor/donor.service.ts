@@ -1,26 +1,26 @@
 import { Injectable } from '@nestjs/common';
+import { FirebaseService } from '../services/firebase.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
-import { UpdateDonorDto } from './dto/update-donor.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
 
 @Injectable()
-export class DonorService {
-  create(createDonorDto: CreateDonorDto) {
-    return 'This action adds a new donor';
+export class DonorsService {
+  constructor(private firebaseService: FirebaseService) {}
+
+  async createDonor(createDonorDto: CreateDonorDto) {
+    const firestore = this.firebaseService.getFirestore();
+    const donorRef = firestore.collection('donors').doc();
+    await donorRef.set({
+      ...createDonorDto,
+      isActive: true,
+    });
+    return { donorId: donorRef.id };
   }
 
-  findAll() {
-    return `This action returns all donor`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} donor`;
-  }
-
-  update(id: number, updateDonorDto: UpdateDonorDto) {
-    return `This action updates a #${id} donor`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} donor`;
+  async updateLocation(donorId: string, updateLocationDto: UpdateLocationDto) {
+    const firestore = this.firebaseService.getFirestore();
+    const donorRef = firestore.collection('donors').doc(donorId);
+    await donorRef.update({ location: updateLocationDto });
+    return { status: 'Location updated' };
   }
 }

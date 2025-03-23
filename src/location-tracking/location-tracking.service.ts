@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CreateLocationTrackingDto } from './dto/create-location-tracking.dto';
-import { UpdateLocationTrackingDto } from './dto/update-location-tracking.dto';
+import { UpdateLocationTrackingDto } from './dto/update-location.dto';
 
 @Injectable()
 export class LocationTrackingService {

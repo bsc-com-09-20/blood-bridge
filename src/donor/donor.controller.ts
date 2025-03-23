@@ -1,34 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { DonorService } from './donor.service';
+import { Controller, Post, Body, Param, Patch, UseGuards } from '@nestjs/common';
+import { DonorsService } from './donors.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
-import { UpdateDonorDto } from './dto/update-donor.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
+import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 
-@Controller('donor')
-export class DonorController {
-  constructor(private readonly donorService: DonorService) {}
+@Controller('donors')
+export class DonorsController {
+  constructor(private readonly donorsService: DonorsService) {}
 
-  @Post()
-  create(@Body() createDonorDto: CreateDonorDto) {
-    return this.donorService.create(createDonorDto);
+  @Post('register')
+  @UseGuards(FirebaseAuthGuard) // Protect this route
+  async register(@Body() createDonorDto: CreateDonorDto) {
+    return this.donorsService.createDonor(createDonorDto);
   }
 
-  @Get()
-  findAll() {
-    return this.donorService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.donorService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDonorDto: UpdateDonorDto) {
-    return this.donorService.update(+id, updateDonorDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.donorService.remove(+id);
+  @Patch(':id/location')
+  @UseGuards(FirebaseAuthGuard) // Protect this route
+  async updateLocation(
+    @Param('id') donorId: string,
+    @Body() updateLocationDto: UpdateLocationDto,
+  ) {
+    return this.donorsService.updateLocation(donorId, updateLocationDto);
   }
 }

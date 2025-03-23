@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { LocationTrackingService } from './location-tracking.service';
 import { CreateLocationTrackingDto } from './dto/create-location-tracking.dto';
-import { UpdateLocationTrackingDto } from './dto/update-location-tracking.dto';
+import { UpdateLocationTrackingDto } from './dto/update-location.dto';
 
 @Controller('location-tracking')
 export class LocationTrackingController {
