@@ -7,9 +7,14 @@ import { BloodRequestModule } from './blood-request/blood-request.module';
 import { SettingsModule } from './settings/settings.module';
 import { LocationTrackingModule } from './location-tracking/location-tracking.module';
 import { NotificationModule } from './notification/notification.module';
+import { FirebaseModule } from './firebase/firebase.module';
+import { AuthModule } from './auth/auth.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [HospitalModule, DonorModule, BloodRequestModule, SettingsModule, LocationTrackingModule, NotificationModule],
+  imports: [   ConfigModule.forRoot({
+    isGlobal: true,
+  }),HospitalModule, DonorModule, BloodRequestModule, SettingsModule, LocationTrackingModule, NotificationModule, FirebaseModule, AuthModule],
   controllers: [AppController],
   providers: [AppService],
 })
