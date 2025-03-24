@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { FirebaseService } from '../services/firebase.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
-import { UpdateLocationDto } from './dto/update-location.dto';
+import { UpdateLocationDto } from '../location-tracking/dto/update-location.dto';
 
 @Injectable()
 export class DonorsService {
