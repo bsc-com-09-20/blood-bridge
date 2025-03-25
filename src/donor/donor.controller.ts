@@ -1,34 +1,46 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { DonorService } from './donor.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
+import { FilterDonorDto } from './dto/filter-donor.dto';
+import { Donor } from './entities/donor.entity';
 
-@Controller('donor')
+@Controller('donors')
 export class DonorController {
   constructor(private readonly donorService: DonorService) {}
 
   @Post()
-  create(@Body() createDonorDto: CreateDonorDto) {
+  async create(@Body() createDonorDto: CreateDonorDto): Promise<Donor> {
     return this.donorService.create(createDonorDto);
   }
 
   @Get()
-  findAll() {
-    return this.donorService.findAll();
+  async findAll(@Query() filterDto: FilterDonorDto): Promise<Donor[]> {
+    return this.donorService.findAll(filterDto);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.donorService.findOne(+id);
+  async findOne(@Param('id') id: string): Promise<Donor> {
+    return this.donorService.findOne(id);
+  }
+
+  @Get('email/:email')
+  async findByEmail(@Param('email') email: string): Promise<Donor | null> {
+    return this.donorService.findByEmail(email);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDonorDto: UpdateDonorDto) {
-    return this.donorService.update(+id, updateDonorDto);
+  async update(@Param('id') id: string, @Body() updateDonorDto: UpdateDonorDto): Promise<Donor> {
+    return this.donorService.update(id, updateDonorDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.donorService.remove(+id);
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.donorService.remove(id);
+  }
+
+  @Get('eligible')
+  async getEligibleDonors(): Promise<Donor[]> {
+    return this.donorService.getEligibleDonors();
   }
 }
