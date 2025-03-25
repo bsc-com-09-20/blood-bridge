@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
@@ -55,7 +57,7 @@ export class DonorService {
 
   async findAll(filterDto?: FilterDonorDto): Promise<Donor[]> {
     const firestore = this.firebaseService.getFirestore();
-    let query = firestore.collection(this.donorsCollection);
+   const query = firestore.collection(this.donorsCollection);
     
     const snapshot = await query.get();
     

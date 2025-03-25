@@ -1,34 +1,38 @@
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { ApiConsumes } from '@nestjs/swagger';
 
 @Controller('events')
-export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+export class EventController {
+  constructor(private readonly eventService: EventsService) {}
 
   @Post()
+  @ApiConsumes('application/x-www-form-urlencoded')
   create(@Body() createEventDto: CreateEventDto) {
-    return this.eventsService.create(createEventDto);
+    return this.eventService.create(createEventDto);
   }
 
   @Get()
   findAll() {
-    return this.eventsService.findAll();
+    return this.eventService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.eventsService.findOne(+id);
+    return this.eventService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
-    return this.eventsService.update(+id, updateEventDto);
+    return this.eventService.update(id, updateEventDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.eventsService.remove(+id);
+    return this.eventService.remove(id);
   }
 }
