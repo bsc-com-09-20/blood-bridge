@@ -1,14 +1,14 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { DonorService } from './donor.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
-import { UpdateLocationDto } from '../location-tracking/dto/update-location.dto';
+import {UpdateLocationTrackingDto } from '../location-tracking/dto/update-location-tracking.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
 import { Donor } from './entities/donor.entity';
 import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 
 @Controller('donors')
-export class DonorsController {
+export class DonorController {
   constructor(private readonly donorsService: DonorService) {}
 
   @Post('register')
@@ -19,8 +19,8 @@ export class DonorsController {
 
   @Patch(':id/location')
   @UseGuards(FirebaseAuthGuard) // Protect this route
-  async updateLocation(@Param('id') donorId: string, @Body() updateLocationDto: UpdateLocationDto) {
-    return this.donorsService.updateLocation(donorId, updateLocationDto);
+  async updateLocation(@Param('id') donorId: string, @Body() UpdateLocationTrackingDto: UpdateLocationTrackingDto) {
+    return this.donorsService.updateLocation(donorId, UpdateLocationTrackingDto);
   }
 
   @Get()

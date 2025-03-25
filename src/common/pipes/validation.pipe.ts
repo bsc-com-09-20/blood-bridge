@@ -3,7 +3,7 @@ import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
 
 @Injectable()
-export class ValidationPipe implements PipeTransform<any> {
+export class CommonValidationPipe implements PipeTransform<any> {
   async transform(value: any, { metatype }: any) {
     if (!metatype || !this.toValidate(metatype)) {
       return value;

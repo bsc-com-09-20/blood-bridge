@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { LocationTrackingService } from './location-tracking.service';
 import { LocationTrackingController } from './location-tracking.controller';
+import { LocationTrackingService } from './location-tracking.service';
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Module({
   controllers: [LocationTrackingController],
-  providers: [LocationTrackingService],
+  providers: [LocationTrackingService, FirebaseService],
 })
 export class LocationTrackingModule {}

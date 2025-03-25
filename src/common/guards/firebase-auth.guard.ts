@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import admin from '../../config/firebase.config'; // Import Firebase Admin SDK
+import { Reflector } from '@nestjs/core'; 
+import * as admin from 'firebase-admin';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {

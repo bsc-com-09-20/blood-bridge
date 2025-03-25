@@ -5,5 +5,13 @@ export class Donor {
     lastDonation: string;
     email: string;
     phone: string;
-    password?: string; // Not stored in Firestore, only used for initial creation
+    password?: string;
+    isActive: boolean;
+    location: {
+      latitude: number;
+      longitude: number;
+    } | null;  
+    createdAt: string
   }
+
+  

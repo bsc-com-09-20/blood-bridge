@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
-import { UpdateLocationDto } from '../location-tracking/dto/update-location.dto';
+import { UpdateLocationTrackingDto } from '../location-tracking/dto/update-location-tracking.dto';
 import { Donor } from './entities/donor.entity';
 import { FilterDonorDto } from './dto/filter-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
@@ -9,207 +9,216 @@ import { UpdateDonorDto } from './dto/update-donor.dto';
 @Injectable()
 export class DonorService {
   private readonly donorsCollection = 'donors';
+  private readonly locationCollection = 'locationTracking';
+  private readonly minDonationInterval = 3; // months
 
   constructor(private readonly firebaseService: FirebaseService) {}
 
   /**
-   * Creates a new donor.
+   * Creates a new donor with email uniqueness check
    */
   async createDonor(createDonorDto: CreateDonorDto): Promise<Donor> {
+    const { email, password, name } = createDonorDto;
     const firestore = this.firebaseService.getFirestore();
     const auth = this.firebaseService.getAuth();
 
     try {
-      // Check if email already exists
+      // Check for existing email
       try {
-        const userRecord = await auth.getUserByEmail(createDonorDto.email);
-        if (userRecord) {
-          throw new ConflictException('Email already exists');
-        }
+        await auth.getUserByEmail(email);
+        throw new ConflictException('Email already registered');
       } catch (error) {
-        if (error instanceof ConflictException) throw error;
+        if (error.code !== 'auth/user-not-found') throw error;
       }
 
-      // Create user in Firebase Authentication
+      // Create auth user
       const userRecord = await auth.createUser({
-        email: createDonorDto.email,
-        password: createDonorDto.password,
-        displayName: createDonorDto.name,
+        email,
+        password,
+        displayName: name,
+        disabled: false
       });
 
-      // Set last donation date
-      const lastDonation = createDonorDto.lastDonation || new Date().toISOString();
-
-      const newDonor: Omit<Donor, 'password'> = {
-        name: createDonorDto.name,
-        email: createDonorDto.email,
+      // Prepare donor data
+      const donorData: Omit<Donor, 'id'> = {
+        name,
+        email,
         bloodGroup: createDonorDto.bloodGroup,
         phone: createDonorDto.phone,
-        lastDonation,
+        lastDonation: createDonorDto.lastDonation || new Date().toISOString(),
         isActive: true,
+        location: null,
+        createdAt: new Date().toISOString()
       };
 
-      // Store donor in Firestore
-      await firestore.collection(this.donorsCollection).doc(userRecord.uid).set(newDonor);
+      // Save to Firestore
+      await firestore.collection(this.donorsCollection)
+        .doc(userRecord.uid)
+        .set(donorData);
 
-      return {
-        id: userRecord.uid,
-        ...newDonor,
-      } as Donor;
+      return { id: userRecord.uid, ...donorData };
     } catch (error) {
       if (error instanceof ConflictException) throw error;
-      throw new Error(`Failed to create donor: ${error.message}`);
+      throw new InternalServerErrorException('Failed to create donor');
     }
   }
 
   /**
-   * Updates donor's location.
+   * Updates donor location (with timestamp)
    */
-  async updateLocation(donorId: string, updateLocationDto: UpdateLocationDto): Promise<{ status: string }> {
+  async updateLocation(donorId: string, updateLocationDto: UpdateLocationTrackingDto): Promise<void> {
     const firestore = this.firebaseService.getFirestore();
+    const batch = firestore.batch();
+
     const donorRef = firestore.collection(this.donorsCollection).doc(donorId);
+    const locationRef = firestore.collection(this.locationCollection).doc();
 
-    const donorDoc = await donorRef.get();
-    if (!donorDoc.exists) {
-      throw new NotFoundException('Donor not found');
+    const locationData = {
+      ...updateLocationDto,
+      donorId,
+      timestamp: new Date().toISOString()
+    };
+
+    // Update both donor record and location history in transaction
+    batch.update(donorRef, { location: updateLocationDto });
+    batch.set(locationRef, locationData);
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      throw new NotFoundException('Donor not found or update failed');
     }
-
-    await donorRef.update({ location: updateLocationDto });
-    return { status: 'Location updated' };
   }
 
   /**
-   * Retrieves all donors with optional filtering.
+   * Finds donors with optional filters
    */
   async findAll(filterDto?: FilterDonorDto): Promise<Donor[]> {
     const firestore = this.firebaseService.getFirestore();
-    let query = firestore.collection(this.donorsCollection);
-
-    const snapshot = await query.get();
-    if (snapshot.empty) return [];
-
-    let donors = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Donor[];
-
-    if (filterDto?.name) {
-      const nameLower = filterDto.name.toLowerCase();
-      donors = donors.filter(donor => donor.name.toLowerCase().includes(nameLower));
-    }
+    let query = firestore.collection(this.donorsCollection).where('isActive', '==', true);
 
     if (filterDto?.bloodGroup) {
-      donors = donors.filter(donor => donor.bloodGroup === filterDto.bloodGroup);
+      query = query.where('bloodGroup', '==', filterDto.bloodGroup);
     }
 
-    return donors;
+    const snapshot = await query.get();
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Donor));
   }
 
   /**
-   * Retrieves a donor by ID.
+   * Gets donor by ID with existence check
    */
   async findOne(id: string): Promise<Donor> {
-    const firestore = this.firebaseService.getFirestore();
-    const donorDoc = await firestore.collection(this.donorsCollection).doc(id).get();
-
-    if (!donorDoc.exists) {
-      throw new NotFoundException('Donor not found');
-    }
-
-    return { id: donorDoc.id, ...donorDoc.data() } as Donor;
-  }
-
-  /**
-   * Retrieves a donor by email.
-   */
-  async findByEmail(email: string): Promise<Donor | null> {
-    const firestore = this.firebaseService.getFirestore();
-    const snapshot = await firestore.collection(this.donorsCollection)
-      .where('email', '==', email)
-      .limit(1)
+    const doc = await this.firebaseService.getFirestore()
+      .collection(this.donorsCollection)
+      .doc(id)
       .get();
 
-    if (snapshot.empty) return null;
-
-    const doc = snapshot.docs[0];
+    if (!doc.exists) throw new NotFoundException('Donor not found');
     return { id: doc.id, ...doc.data() } as Donor;
   }
 
   /**
-   * Updates donor information.
+   * Updates donor profile with auth sync
    */
   async update(id: string, updateDonorDto: UpdateDonorDto): Promise<Donor> {
     const firestore = this.firebaseService.getFirestore();
     const auth = this.firebaseService.getAuth();
 
     try {
-      const donorRef = firestore.collection(this.donorsCollection).doc(id);
-      const donorDoc = await donorRef.get();
+      // Update Auth first
+      const authUpdates = {};
+      if (updateDonorDto.email) authUpdates['email'] = updateDonorDto.email;
+      if (updateDonorDto.name) authUpdates['displayName'] = updateDonorDto.name;
+      
+      if (Object.keys(authUpdates).length > 0) {
+        await auth.updateUser(id, authUpdates);
+      }
 
-      if (!donorDoc.exists) {
+      // Then update Firestore
+      await firestore.collection(this.donorsCollection)
+        .doc(id)
+        .set(updateDonorDto, { merge: true });
+
+      return this.findOne(id);
+    } catch (error) {
+      if (error.code === 'auth/user-not-found') {
         throw new NotFoundException('Donor not found');
       }
-
-      // Update Firebase Authentication
-      if (updateDonorDto.email) {
-        await auth.updateUser(id, { email: updateDonorDto.email, displayName: updateDonorDto.name || undefined });
-      } else if (updateDonorDto.name) {
-        await auth.updateUser(id, { displayName: updateDonorDto.name });
-      }
-
-      // Merge updates into Firestore
-      await donorRef.set(updateDonorDto, { merge: true });
-
-      const updatedDonorDoc = await donorRef.get();
-      return { id: updatedDonorDoc.id, ...updatedDonorDoc.data() } as Donor;
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new Error(`Failed to update donor: ${error.message}`);
+      throw new InternalServerErrorException('Update failed');
     }
   }
 
   /**
-   * Deletes a donor.
+   * Gets eligible donors (last donation > 3 months ago)
+   */
+  async getEligibleDonors(): Promise<Donor[]> {
+    const donors = await this.findAll();
+    const cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - this.minDonationInterval);
+
+    return donors.filter(donor => {
+      const lastDonationDate = new Date(donor.lastDonation);
+      return lastDonationDate <= cutoffDate;
+    });
+  }
+
+  /**
+ * Finds a donor by email (case-sensitive exact match)
+ */
+async findByEmail(email: string): Promise<Donor | null> {
+  const firestore = this.firebaseService.getFirestore();
+  
+  try {
+    const snapshot = await firestore.collection(this.donorsCollection)
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return null;
+    }
+
+    const doc = snapshot.docs[0];
+    return { 
+      id: doc.id,
+      name: doc.data().name,
+      email: doc.data().email,
+      bloodGroup: doc.data().bloodGroup,
+      phone: doc.data().phone,
+      lastDonation: doc.data().lastDonation,
+      isActive: doc.data().isActive,
+      location: doc.data().location,
+      createdAt: doc.data().createdAt
+    } as Donor;
+  } catch (error) {
+    throw new InternalServerErrorException('Failed to find donor by email');
+  }
+}
+
+  /**
+   * Deletes donor with cleanup
    */
   async remove(id: string): Promise<void> {
     const firestore = this.firebaseService.getFirestore();
     const auth = this.firebaseService.getAuth();
 
     try {
-      const donorRef = firestore.collection(this.donorsCollection).doc(id);
-      const donorDoc = await donorRef.get();
+      // Soft delete (recommended instead of hard delete)
+      await firestore.collection(this.donorsCollection)
+        .doc(id)
+        .update({ isActive: false });
 
-      if (!donorDoc.exists) {
+      // Optionally disable auth account
+      await auth.updateUser(id, { disabled: true });
+    } catch (error) {
+      if (error.code === 'auth/user-not-found' || error.code === 5) {
         throw new NotFoundException('Donor not found');
       }
-
-      await donorRef.delete();
-      await auth.deleteUser(id);
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new Error(`Failed to delete donor: ${error.message}`);
+      throw new InternalServerErrorException('Deletion failed');
     }
-  }
-
-  /**
-   * Retrieves donors eligible for donation (last donation was at least 3 months ago).
-   */
-  async getEligibleDonors(): Promise<Donor[]> {
-    const donors = await this.findAll();
-
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-    return donors.filter(donor => {
-      const lastDonationDate = this.parseLastDonationDate(donor.lastDonation);
-      return lastDonationDate <= threeMonthsAgo;
-    });
-  }
-
-  /**
-   * Parses last donation date.
-   */
-  private parseLastDonationDate(lastDonation: string): Date {
-    return new Date(lastDonation);
   }
 }

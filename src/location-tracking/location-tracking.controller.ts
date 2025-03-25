@@ -1,34 +1,25 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
 import { LocationTrackingService } from './location-tracking.service';
 import { CreateLocationTrackingDto } from './dto/create-location-tracking.dto';
-import { UpdateLocationTrackingDto } from './dto/update-location.dto';
+import { UpdateLocationTrackingDto } from './dto/update-location-tracking.dto';
+import { FirebaseAuthGuard } from '../common/guards/firebase-auth.guard';
 
 @Controller('location-tracking')
 export class LocationTrackingController {
-  constructor(private readonly locationTrackingService: LocationTrackingService) {}
+  constructor(private readonly locationService: LocationTrackingService) {}
 
   @Post()
-  create(@Body() createLocationTrackingDto: CreateLocationTrackingDto) {
-    return this.locationTrackingService.create(createLocationTrackingDto);
+  @UseGuards(FirebaseAuthGuard)
+  async create(@Body() data: CreateLocationTrackingDto) {
+    return this.locationService.createLocation(data);
   }
 
-  @Get()
-  findAll() {
-    return this.locationTrackingService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.locationTrackingService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLocationTrackingDto: UpdateLocationTrackingDto) {
-    return this.locationTrackingService.update(+id, updateLocationTrackingDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.locationTrackingService.remove(+id);
+  @Patch(':donorId')
+  @UseGuards(FirebaseAuthGuard)
+  async update(
+    @Param('donorId') donorId: string,
+    @Body() data: UpdateLocationTrackingDto,
+  ) {
+    return this.locationService.updateLocation(donorId, data);
   }
 }

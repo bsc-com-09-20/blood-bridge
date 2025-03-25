@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Matches, MinLength, IsOptional,IsBoolean } from 'class-validator';
 
 // DTO for creating a new donor
 export class CreateDonorDto {
@@ -25,4 +25,9 @@ export class CreateDonorDto {
   @IsNotEmpty()
   @MinLength(6)
   password: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+  
 }

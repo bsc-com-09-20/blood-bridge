@@ -10,12 +10,14 @@ import { NotificationModule } from './notification/notification.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
+import { FirebaseService } from './firebase/firebase.service';
 
 @Module({
   imports: [   ConfigModule.forRoot({
     isGlobal: true,
+   envFilePath: '.env',
   }),HospitalModule, DonorModule, BloodRequestModule, SettingsModule, LocationTrackingModule, NotificationModule, FirebaseModule, AuthModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,FirebaseService],
 })
 export class AppModule {}

@@ -1,6 +1,6 @@
 import { IsNumber, IsNotEmpty } from 'class-validator';
 
-export class UpdateLocationDto {
+export class UpdateLocationTrackingDto {
   @IsNumber()
   @IsNotEmpty()
   latitude: number;

@@ -1,13 +1,13 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { DonorsController } from './donor.controller';
+import { DonorController } from './donor.controller';
 import { DonorService } from './donor.service';
 import { FirebaseService } from '../services/firebase.service';
 import { FirebaseModule } from '../firebase/firebase.module';
 
 @Module({
-  imports: [forwardRef(() => FirebaseModule)], // ✅ Fix circular dependency
-  controllers: [DonorsController],
+  imports: [forwardRef(() => FirebaseModule)], 
+  controllers: [DonorController],
   providers: [DonorService, FirebaseService],
-  exports: [DonorService], // Ensuring other modules can use DonorsService
+  exports: [DonorService],
 })
-export class DonorsModule {}
+export class DonorModule {}
