@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import * as path from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DonorsModule } from './donors/donors.module';
@@ -15,7 +16,10 @@ import { DonorModule } from './donor/donor.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: path.resolve(__dirname, '../.env'),
+    }),
     DonorsModule,
     BloodInventoryModule,
     HospitalModule,
