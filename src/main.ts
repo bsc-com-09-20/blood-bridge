@@ -33,6 +33,6 @@ async function bootstrap() {
   // Setup the Swagger UI endpoint (e.g., http://localhost:3000/api)
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3005);
+  await app.listen(3004);
 }
 bootstrap();

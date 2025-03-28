@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { BloodInventoryService } from './blood-inventory.service';
 import { BloodInventoryController } from './blood-inventory.controller';
-import { FirebaseModule } from '../firebase/firebase.module'; // Import the FirebaseModule
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Module({
-  imports: [FirebaseModule], // Include FirebaseModule in the imports array
   controllers: [BloodInventoryController],
-  providers: [BloodInventoryService],
+  providers: [BloodInventoryService, FirebaseService],
+  exports: [BloodInventoryService],
 })
 export class BloodInventoryModule {}
