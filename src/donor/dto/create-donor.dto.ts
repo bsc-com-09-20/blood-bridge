@@ -1,6 +1,32 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength, IsOptional } from 'class-validator';
+import { 
+  IsEmail, 
+  IsNotEmpty, 
+  IsString, 
+  Matches, 
+  MinLength, 
+  IsOptional, 
+  IsNumber,
+  IsDate,
+  ValidateNested 
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-// DTO for creating a new donor
+// ✅ Location DTO for nested validation
+export class LocationDto {
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
+
+  @IsOptional()
+  @IsString()
+  geohash?: string;
+}
+
+// ✅ Donor DTO with proper validation
 export class CreateDonorDto {
   @IsNotEmpty()
   @IsString()
@@ -11,18 +37,26 @@ export class CreateDonorDto {
   bloodGroup: string;
 
   @IsOptional()
-  @IsString()
-  lastDonation?: string;
+  @IsDate() // ✅ Ensures it's a valid date
+  @Type(() => Date) // ✅ Converts input into a Date object
+  lastDonation?: Date;
 
   @IsNotEmpty()
   @IsEmail()
   email: string;
 
   @IsNotEmpty()
-  @Matches(/^\d{10}$/, { message: 'Phone number must be 10 digits' })
+  @Matches(/^\+[1-9]\d{1,14}$/, {
+    message: 'Phone number must be in E.164 format',
+  })
   phone: string;
 
   @IsNotEmpty()
   @MinLength(6)
   password: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => LocationDto)
+  location?: LocationDto;
 }

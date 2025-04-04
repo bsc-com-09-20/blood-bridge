@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DonorService } from './donor.service';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
@@ -20,9 +20,13 @@ export class DonorController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<Donor> {
-    return this.donorService.findOne(id);
+async findOne(@Param('id') id: string): Promise<Donor> {
+  const donor = await this.donorService.findOne(id);
+  if (!donor) {
+    throw new NotFoundException(`Donor with ID ${id} not found`);
   }
+  return donor;
+}
 
   @Get('email/:email')
   async findByEmail(@Param('email') email: string): Promise<Donor | null> {
@@ -39,8 +43,18 @@ export class DonorController {
     return this.donorService.remove(id);
   }
 
-  @Get('eligible')
-  async getEligibleDonors(): Promise<Donor[]> {
-    return this.donorService.getEligibleDonors();
+  @Get('nearby')
+  async findNearbyDonors(
+    @Query('latitude') latitude: number,
+    @Query('longitude') longitude: number,
+    @Query('radius') radius: number = 10,
+    @Query('bloodGroup') bloodGroup?: string,
+  ): Promise<Donor[]> {
+    return this.donorService.findNearbyDonors(latitude, longitude, radius, bloodGroup);
+  }
+
+  @Get('blood-group-insufficiency')
+  async getBloodGroupInsufficientDonors(@Query('bloodGroup') bloodGroup: string) {
+    return this.donorService.getBloodGroupInsufficientDonors(bloodGroup);
   }
 }
