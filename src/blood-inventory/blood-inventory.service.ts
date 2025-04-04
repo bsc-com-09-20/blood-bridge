@@ -1,71 +1,77 @@
-import { Injectable } from '@nestjs/common';
+/*import { Injectable } from '@nestjs/common';
 import { CreateBloodInventoryDto } from './dto/create-blood-inventory.dto';
 import { UpdateBloodInventoryDto } from './dto/update-blood-inventory.dto';
-import { BloodInventory } from './entities/blood-inventory.entity';
 
 @Injectable()
 export class BloodInventoryService {
-  private bloodInventory: BloodInventory[] = [
-    {
-      id: 1,
-      bloodGroup: "A+",
-      availableUnits: 10,
-      status: "Sufficient"
-    },
-    {
-      id: 2,
-      bloodGroup: "O-",
-      availableUnits: 1,
-      status: "Critical Shortage"
-    }
-  ];
 
-  create(createBloodInventoryDto: CreateBloodInventoryDto) {
+  // Create a new blood inventory record
+  async create(createBloodInventoryDto: CreateBloodInventoryDto) {
+    const bloodInventoryRef = this.firebaseService.getFirestore().collection('blood_inventory');
+
+    // Generate a unique Firestore ID
+    const newDocRef = bloodInventoryRef.doc();
+    const id = newDocRef.id; // Firestore auto-generated string ID
+
+    // Add data to Firestore
     const newInventory = {
-      id: this.bloodInventory.length + 1,
+      id,
       ...createBloodInventoryDto,
     };
-    this.bloodInventory.push(newInventory);
+
+    await newDocRef.set(newInventory);
     return newInventory;
   }
 
-  findAll() {
-    return this.bloodInventory;
+  // Get all blood inventory records
+  async findAll() {
+    const snapshot = await this.firebaseService.getFirestore().collection('blood_inventory').get();
+
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return data ? { id: doc.id, ...data } : null;
+    }).filter(item => item !== null);
   }
 
-  findOne(id: number) {
-    return this.bloodInventory.find(inventory => inventory.id === id);
+  // Get a single blood inventory record by ID
+  async findOne(id: string) {
+    const docRef = this.firebaseService.getFirestore()
+      .collection('blood_inventory')
+      .doc(id)
+      .get();
+
+    if (!(await docRef).exists) return null;
+
+    return { id, ...(await docRef).data() };
   }
 
-  update(id: number, updateBloodInventoryDto: UpdateBloodInventoryDto) {
-    const index = this.bloodInventory.findIndex(inventory => inventory.id === id);
-    if (index !== -1) {
-      // Update status based on available units
-      const updatedInventory = {
-        ...this.bloodInventory[index],
-        ...updateBloodInventoryDto,
-      };
-      
-      // Update status if availableUnits is being updated
-      if (typeof updateBloodInventoryDto.availableUnits !== 'undefined') {
-        updatedInventory.status = updateBloodInventoryDto.availableUnits > 0 
-          ? 'Sufficient' 
-          : 'Critical Shortage';
-      }
-      
-      this.bloodInventory[index] = updatedInventory;
-      return updatedInventory;
-    }
-    return null;
+  // Update a blood inventory record by ID
+  async update(id: string, updateBloodInventoryDto: UpdateBloodInventoryDto) {
+   // const docRef = this.firebaseService.getFirestore()
+      .collection('blood_inventory')
+      .doc(id);
+
+    const doc = await docRef.get();
+    if (!doc.exists) throw new Error('Document not found');
+
+    // Apply the update
+    await docRef.update({ ...updateBloodInventoryDto });
+
+    // Get updated document
+    const updatedDoc = await docRef.get();
+    return { id, ...updatedDoc.data() };
   }
 
-  remove(id: number) {
-    const index = this.bloodInventory.findIndex(inventory => inventory.id === id);
-    if (index !== -1) {
-      const inventory = this.bloodInventory[index];
-      this.bloodInventory.splice(index, 1);
-      return inventory;
-    }
-    return null;
+  // Delete a blood inventory record by ID
+  async remove(id: string) {
+    const docRef = this.firebaseService.getFirestore()
+      .collection('blood_inventory')
+      .doc(id);
+
+    const doc = await docRef.get();
+    if (!doc.exists) return null;
+
+    await docRef.delete();
+    return { id, ...doc.data() };
   }
-}
+} */

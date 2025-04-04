@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
+//import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
 import { HospitalModule } from './hospital/hospital.module';
 import { BloodRequestModule } from './blood-request/blood-request.module';
 import { SettingsModule } from './settings/settings.module';
@@ -37,7 +37,7 @@ import { Hospital } from './hospital/entities/hospital.entity';
     }),
     
     // Feature Modules
-    BloodInventoryModule,
+    //BloodInventoryModule,
     HospitalModule,
     BloodRequestModule,
     SettingsModule,

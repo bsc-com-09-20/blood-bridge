@@ -1,4 +1,4 @@
-import {
+/*import {
   Controller,
   Get,
   Post,
@@ -31,9 +31,9 @@ export class BloodInventoryController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a blood inventory entry by id' })
+  @ApiOperation({ summary: 'Get a blood inventory entry by ID' })
   findOne(@Param('id') id: string) {
-    return this.bloodInventoryService.findOne(+id);
+    return this.bloodInventoryService.findOne(id); // ✅ Removed `+id`
   }
 
   @Patch(':id')
@@ -42,12 +42,12 @@ export class BloodInventoryController {
     @Param('id') id: string,
     @Body() updateBloodInventoryDto: UpdateBloodInventoryDto,
   ) {
-    return this.bloodInventoryService.update(+id, updateBloodInventoryDto);
+    return this.bloodInventoryService.update(id, updateBloodInventoryDto); // ✅ Removed `+id`
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a blood inventory entry' })
   remove(@Param('id') id: string) {
-    return this.bloodInventoryService.remove(+id);
+    return this.bloodInventoryService.remove(id); // ✅ Removed `+id`
   }
-}
+}*/
