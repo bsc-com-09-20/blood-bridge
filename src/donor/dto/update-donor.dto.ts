@@ -36,6 +36,10 @@ export class UpdateDonorDto {
   email?: string;
 
   @IsOptional()
+  @IsString()
+  password?: string;  
+
+  @IsOptional()
   @Matches(/^\+[1-9]\d{1,14}$/, {
     message: 'Phone number must be in E.164 format',
   })
