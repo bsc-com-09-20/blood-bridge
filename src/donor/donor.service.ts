@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Donor } from './entities/donor.entity';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
@@ -13,9 +14,12 @@ export class DonorService {
     private readonly donorRepository: Repository<Donor>,
   ) {}
 
+  // Hash password before saving the donor
   async create(createDonorDto: CreateDonorDto): Promise<Donor> {
+    const hashedPassword = await bcrypt.hash(createDonorDto.password, 10); // Hash the password
     const newDonor = this.donorRepository.create({
       ...createDonorDto,
+      password: hashedPassword, // Save hashed password
       lastDonation: createDonorDto.lastDonation ? new Date(createDonorDto.lastDonation) : undefined,
     });
     return await this.donorRepository.save(newDonor);
@@ -39,12 +43,19 @@ export class DonorService {
     return await this.donorRepository.findOneBy({ email });
   }
 
+  // Update Donor's password or other data
   async update(id: string, updateDonorDto: UpdateDonorDto): Promise<Donor> {
     const donor = await this.donorRepository.findOneBy({ id });
   
     // If no donor is found, throw NotFoundException
     if (!donor) {
       throw new NotFoundException(`Donor with ID ${id} not found`);
+    }
+
+    // If password is being updated, hash it first
+    if (updateDonorDto.password) {
+      const hashedPassword = await bcrypt.hash(updateDonorDto.password, 10);
+      updateDonorDto.password = hashedPassword;
     }
   
     // Update the donor entity with new data
@@ -53,7 +64,6 @@ export class DonorService {
     // Save the updated donor entity back to the database
     return this.donorRepository.save(donor); // This is where we persist the update
   }
-  
 
   async remove(id: string): Promise<void> {
     await this.donorRepository.delete(id);

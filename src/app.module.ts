@@ -15,6 +15,7 @@ import { Donor } from './donor/entities/donor.entity';
 import { BloodInventory } from './blood-inventory/entities/blood-inventory.entity';
 import { BloodRequest } from './blood-request/entities/blood-request.entity';
 import { Hospital } from './hospital/entities/hospital.entity';
+import { AuthModule } from './auth/auth/auth.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { Hospital } from './hospital/entities/hospital.entity';
     LocationTrackingModule,
     NotificationModule,
     DonorModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
