@@ -1,34 +1,31 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { BloodRequestService } from './blood-request.service';
-import { CreateBloodRequestDto } from './dto/create-blood-request.dto';
-import { UpdateBloodRequestDto } from './dto/update-blood-request.dto';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { HospitalOnly } from '../auth/dto/roles/hospital-roles.decorator';
+import { BloodType } from '../common/enums/blood-type.enum';
 
-@Controller('blood-request')
+class CreateBloodRequestDto {
+  bloodType: BloodType;
+  quantity: number;
+  radius:number;
+}
+
+@Controller('blood-requests')
 export class BloodRequestController {
-  constructor(private readonly bloodRequestService: BloodRequestService) {}
+  constructor(private readonly service: BloodRequestService) {}
 
   @Post()
-  create(@Body() createBloodRequestDto: CreateBloodRequestDto) {
-    return this.bloodRequestService.create(createBloodRequestDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.bloodRequestService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.bloodRequestService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBloodRequestDto: UpdateBloodRequestDto) {
-    return this.bloodRequestService.update(+id, updateBloodRequestDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.bloodRequestService.remove(+id);
+  @UseGuards(JwtAuthGuard)
+  @HospitalOnly()
+  async createRequest(
+    @Body() body: CreateBloodRequestDto,
+    @Req() req
+  ) {
+    return this.service.createRequest(
+      req.user.sub,
+      body.bloodType,
+      body.quantity,
+      body.radius
+    );
   }
 }
