@@ -6,15 +6,17 @@ import { AuthGuard } from './auth.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { Donor } from 'src/donor/entities/donor.entity';
 import { Hospital } from 'src/hospital/entities/hospital.entity';
+import { AuthController } from './auth.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Donor, Hospital]), // Add this line
     JwtModule.register({
-      secret: 'your-secret-key', // Use environment variable in production
+      secret: 'your-secret-key', 
       signOptions: { expiresIn: '1d' },
     }),
   ],
+  controllers: [AuthController],
   providers: [
     AuthService,
     JwtStrategy,
