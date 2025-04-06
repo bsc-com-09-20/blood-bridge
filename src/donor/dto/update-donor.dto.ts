@@ -1,34 +1,28 @@
-import { IsEmail, IsOptional, IsString, Matches, IsNumber, IsDate, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Matches,
+  IsNumber,
+  IsDate,
+  MinLength,
+  IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+import { BloodType } from '../../common/enums/blood-type.enum';
 
-// ✅ Location DTO for nested validation
-export class LocationDto {
-  @IsOptional()
-  @IsNumber()
-  latitude?: number;
-
-  @IsOptional()
-  @IsNumber()
-  longitude?: number;
-
-  @IsOptional()
-  @IsString()
-  geohash?: string;
-}
-
-// ✅ UpdateDonorDto with proper validation
 export class UpdateDonorDto {
   @IsOptional()
   @IsString()
   name?: string;
 
   @IsOptional()
-  @IsString()
-  bloodGroup?: string;
+  @IsEnum(BloodType)
+  bloodType?: BloodType;
 
   @IsOptional()
-  @IsDate() // ✅ Ensures it's a valid date
-  @Type(() => Date) // ✅ Converts input into a Date object
+  @IsDate()
+  @Type(() => Date)
   lastDonation?: Date;
 
   @IsOptional()
@@ -37,7 +31,8 @@ export class UpdateDonorDto {
 
   @IsOptional()
   @IsString()
-  password?: string;  
+  @MinLength(6)
+  password?: string;
 
   @IsOptional()
   @Matches(/^\+[1-9]\d{1,14}$/, {
@@ -46,7 +41,10 @@ export class UpdateDonorDto {
   phone?: string;
 
   @IsOptional()
-  @ValidateNested()
-  @Type(() => LocationDto) // ✅ Ensures proper type conversion
-  location?: LocationDto;
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 }

@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
+import {JwtService} from '@nestjs/jwt';
+import { InjectRepository} from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
@@ -52,7 +52,7 @@ export class AuthService {
 
       if (hospital?.password) {
         user = {
-          id: hospital.id,
+          id: hospital.id.toString(),
           email: hospital.email,
           password: hospital.password,
         };

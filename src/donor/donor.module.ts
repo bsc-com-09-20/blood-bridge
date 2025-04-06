@@ -5,7 +5,7 @@ import { DonorController } from './donor.controller';
 import { Donor } from './entities/donor.entity';
 import { JwtModule } from '@nestjs/jwt';  // Import JwtModule
 import { Reflector } from '@nestjs/core';  // Import Reflector
-import { AuthGuard } from 'src/auth/auth/auth.guard';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Module({
   imports: [

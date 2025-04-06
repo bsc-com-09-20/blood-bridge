@@ -6,6 +6,7 @@ import { Donor } from './entities/donor.entity';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
+import { Point } from 'geojson';
 
 @Injectable()
 export class DonorService {
@@ -14,14 +15,26 @@ export class DonorService {
     private readonly donorRepository: Repository<Donor>,
   ) {}
 
-  // Hash password before saving the donor
   async create(createDonorDto: CreateDonorDto): Promise<Donor> {
-    const hashedPassword = await bcrypt.hash(createDonorDto.password, 10); // Hash the password
+    const hashedPassword = await bcrypt.hash(createDonorDto.password, 10);
+
+    // Create GeoJSON Point object for PostGIS
+    const location = createDonorDto.latitude && createDonorDto.longitude
+      ? {
+          type: 'Point',
+          coordinates: [createDonorDto.longitude, createDonorDto.latitude] // PostGIS uses [lng, lat] order
+        } as Point
+      : undefined;
+
     const newDonor = this.donorRepository.create({
       ...createDonorDto,
-      password: hashedPassword, // Save hashed password
-      lastDonation: createDonorDto.lastDonation ? new Date(createDonorDto.lastDonation) : undefined,
+      password: hashedPassword,
+      location,
+      lastDonation: createDonorDto.lastDonation
+        ? new Date(createDonorDto.lastDonation)
+        : undefined,
     });
+
     return await this.donorRepository.save(newDonor);
   }
 
@@ -29,7 +42,9 @@ export class DonorService {
     const query = this.donorRepository.createQueryBuilder('donor');
 
     if (filterDto.bloodGroup) {
-      query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup: filterDto.bloodGroup });
+      query.andWhere('donor.bloodGroup = :bloodGroup', {
+        bloodGroup: filterDto.bloodGroup,
+      });
     }
 
     return await query.getMany();
@@ -43,68 +58,99 @@ export class DonorService {
     return await this.donorRepository.findOneBy({ email });
   }
 
-  // Update Donor's password or other data
   async update(id: string, updateDonorDto: UpdateDonorDto): Promise<Donor> {
     const donor = await this.donorRepository.findOneBy({ id });
-  
-    // If no donor is found, throw NotFoundException
+
     if (!donor) {
       throw new NotFoundException(`Donor with ID ${id} not found`);
     }
 
-    // If password is being updated, hash it first
     if (updateDonorDto.password) {
-      const hashedPassword = await bcrypt.hash(updateDonorDto.password, 10);
-      updateDonorDto.password = hashedPassword;
+      updateDonorDto.password = await bcrypt.hash(updateDonorDto.password, 10);
     }
-  
-    // Update the donor entity with new data
-    Object.assign(donor, updateDonorDto);
-  
-    // Save the updated donor entity back to the database
-    return this.donorRepository.save(donor); // This is where we persist the update
+
+    // Handle location update
+    if (
+      updateDonorDto.latitude !== undefined &&
+      updateDonorDto.longitude !== undefined
+    ) {
+      donor.location = {
+        type: 'Point',
+        coordinates: [updateDonorDto.longitude, updateDonorDto.latitude]
+      } as Point;
+    }
+
+    // Remove latitude and longitude from the DTO before using Object.assign
+    // These properties likely don't exist on the Donor entity directly
+    const { latitude, longitude, ...updateData } = updateDonorDto;
+    
+    Object.assign(donor, updateData);
+
+    return this.donorRepository.save(donor);
   }
 
   async remove(id: string): Promise<void> {
     await this.donorRepository.delete(id);
   }
-
-  // ✅ Find nearby donors using PostGIS (PostgreSQL)
-  async findNearbyDonors(latitude: number, longitude: number, radius: number, bloodGroup?: string): Promise<Donor[]> {
-    const query = this.donorRepository
-      .createQueryBuilder('donor')
-      .where(`ST_DistanceSphere(
-        ST_MakePoint(:lon, :lat),
-        ST_MakePoint(donor.location->>'longitude', donor.location->>'latitude')
-      ) <= :radius`, {
+  
+  // ✅ Find nearby donors using PostGIS and return lat/lng extracted
+async findNearbyDonors(
+  latitude: number,
+  longitude: number,
+  radiusKm: number,
+  bloodType: string,
+): Promise<(Donor & { lat: number; lng: number })[]> {
+  const query = this.donorRepository
+    .createQueryBuilder('donor')
+    .addSelect(`ST_Y(donor.location)`, 'lat')
+    .addSelect(`ST_X(donor.location)`, 'lng')
+    .where(
+      `ST_DWithin(
+        donor.location,
+        ST_MakePoint(:lng, :lat)::geography,
+        :radius
+      )`,
+      {
+        lng: longitude,
         lat: latitude,
-        lon: longitude,
-        radius: radius * 1000, // Convert km to meters
-      });
+        radius: radiusKm * 1000,
+      },
+    );
 
-    if (bloodGroup) {
-      query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup });
-    }
-
-    return await query.getMany();
+   // Only add the blood group filter if bloodType is provided
+   if (bloodType) {
+    query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup: bloodType });
   }
 
-  // ✅ Check blood group insufficiency
-  async getBloodGroupInsufficientDonors(bloodGroup: string) {
-    const minDonorsRequired = 5; // Minimum threshold
-    const compatibleGroups = this.getCompatibleBloodGroups(bloodGroup);
-    
-    const totalDonors = await this.donorRepository.count({ where: { bloodGroup } });
+  const raw = await query.getRawAndEntities();
 
-    return {
-      requiredBloodGroup: bloodGroup,
-      compatibleBloodGroups: compatibleGroups,
-      totalDonors,
-      insufficientDonors: totalDonors < minDonorsRequired ? minDonorsRequired - totalDonors : 0,
-    };
-  }
+  // Map entities to include the extracted lat/lng values
+  return raw.entities.map((donor, i) => ({
+    ...donor,
+    lat: parseFloat(raw.raw[i].lat),
+    lng: parseFloat(raw.raw[i].lng),
+  }));
+}
 
-  // ✅ Blood compatibility mapping
+
+async getBloodGroupInsufficientDonors(bloodGroup: string) {
+  // Implementation depends on your business logic
+  // Example implementation:
+  const threshold = 5; // Define what "insufficient" means (e.g., less than 5 donors)
+  
+  const count = await this.donorRepository.count({
+    where: { bloodGroup }
+  });
+  
+  return {
+    bloodGroup,
+    count,
+    isInsufficient: count < threshold
+  };
+}
+  
+
+  // Compatibility function for blood groups
   private getCompatibleBloodGroups(bloodGroup: string): string[] {
     const compatibility = {
       'O-': ['O-'],
