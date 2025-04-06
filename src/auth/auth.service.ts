@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { Point } from 'geojson';
 
 import { LoginDto } from './dto/login.dto';
-import { DonorRegisterDto } from './dto/donor-register.dto';
+import {  CreateDonorDto } from '../donor/dto/create-donor.dto';
 import { Donor } from 'src/donor/entities/donor.entity';
 import { Hospital } from 'src/hospital/entities/hospital.entity';
 
@@ -112,7 +112,7 @@ export class AuthService {
     throw new UnauthorizedException('Invalid email or password');
   }
   
-  async registerDonor(dto: DonorRegisterDto) {
+  async registerDonor(dto: CreateDonorDto) {
     // Check if email already exists
     const existingDonor = await this.donorRepo.findOne({
       where: { email: dto.email }

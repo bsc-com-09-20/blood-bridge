@@ -19,7 +19,7 @@ export class CreateDonorDto {
 
   @IsNotEmpty()
   @IsEnum(BloodType)
-  bloodType: BloodType;
+  bloodGroup: BloodType;
 
   @IsOptional()
   @IsDate()
