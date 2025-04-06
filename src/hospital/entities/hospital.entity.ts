@@ -1,25 +1,28 @@
-export interface Hospital {
-    id: string;
-    name: string;
-    address: string;
-    contactEmail: string;
-    contactPhone: string;
-    location: {
-      latitude: number;
-      longitude: number;
-    };
-    bloodTypeNeeded: string;
-    bloodRequests: BloodRequest[];
-    preferredDonors: string[];
-    createdAt: string;
-    updatedAt: string;
-  }
-  
-  export interface BloodRequest {
-    requestId: string;
-    bloodType: string;
-    quantity: number;
-    status: 'pending' | 'fulfilled' | 'cancelled';
-    createdAt: string;
-    updatedAt: string;
-  }
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Hospital {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ unique: true })
+  email: string;
+
+  @Column()
+  password: string;
+
+  @Column()
+  name: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  latitude: number;
+
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  longitude: number;
+
+  @Column({ type: 'geography', spatialFeatureType: 'Point', srid: 4326, nullable: true })
+  location: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  last_login: Date;
+}

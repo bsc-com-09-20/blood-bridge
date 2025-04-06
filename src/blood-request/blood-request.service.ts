@@ -10,49 +10,44 @@ import { BloodType } from '../common/enums/blood-type.enum';
 export class BloodRequestService {
   constructor(
     @InjectRepository(BloodRequest)
-    private bloodRequestRepository: Repository<BloodRequest>,
-
-    private hospitalsService: HospitalService,
-    private donorsService: DonorService,
+    private readonly bloodRequestRepository: Repository<BloodRequest>,
+    private readonly hospitalService: HospitalService,
+    private readonly donorService: DonorService, // Exact name match
   ) {}
 
   async createRequest(
     hospitalId: number,
     bloodType: BloodType,
     quantity: number,
-    radius: number, // radius in km
+    radius: number,
   ) {
-    const hospital = await this.hospitalsService.findOne(hospitalId);
+    const hospital = await this.hospitalService.findOne(hospitalId);
     if (!hospital) throw new NotFoundException('Hospital not found');
 
-    // Find nearby donors matching blood type
-    const donors = await this.donorsService.findNearbyDonors(
+    const donors = await this.donorService.findNearbyDonors(
       hospital.latitude,
       hospital.longitude,
       radius,
       bloodType,
     );
 
-    if (!donors.length) {
-      return []; // No donors found nearby
-    }
+    if (!donors.length) return [];
 
-    // Generate blood request entries
-    const requests = donors.map((donor) => {
-      // Use lat and lng properties from the findNearbyDonors result
+    const requests = donors.map(donor => {
       const distance = this.calculateDistance(
         hospital.latitude,
         hospital.longitude,
-        donor.lat,  // Use lat instead of latitude
-        donor.lng   // Use lng instead of longitude
+        donor.lat,
+        donor.lng,
       );
 
       return this.bloodRequestRepository.create({
         hospital: { id: hospital.id },
-        donor: { id: donor.id }, // Use id instead of userId
+        donor: { id: donor.id },
         bloodType,
         quantity,
         distanceKm: distance,
+        status: 'PENDING', // Recommended to add status
       });
     });
 

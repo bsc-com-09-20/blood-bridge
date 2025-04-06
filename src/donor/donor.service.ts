@@ -1,224 +1,167 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
-import { FirebaseService } from '../firebase/firebase.service';
-import { CreateDonorDto } from './dto/create-donor.dto';
-import { UpdateLocationTrackingDto } from '../location-tracking/dto/update-location-tracking.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Donor } from './entities/donor.entity';
-import { FilterDonorDto } from './dto/filter-donor.dto';
+import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
+import { FilterDonorDto } from './dto/filter-donor.dto';
+import { Point } from 'geojson';
 
 @Injectable()
 export class DonorService {
-  private readonly donorsCollection = 'donors';
-  private readonly locationCollection = 'locationTracking';
-  private readonly minDonationInterval = 3; // months
+  constructor(
+    @InjectRepository(Donor)
+    private readonly donorRepository: Repository<Donor>,
+  ) {}
 
-  constructor(private readonly firebaseService: FirebaseService) {}
+  async create(createDonorDto: CreateDonorDto): Promise<Donor> {
+    const hashedPassword = await bcrypt.hash(createDonorDto.password, 10);
 
-  /**
-   * Creates a new donor with email uniqueness check
-   */
-  async createDonor(createDonorDto: CreateDonorDto): Promise<Donor> {
-    const { email, password, name } = createDonorDto;
-    const firestore = this.firebaseService.getFirestore();
-    const auth = this.firebaseService.getAuth();
+    // Create GeoJSON Point object for PostGIS
+    const location = createDonorDto.latitude && createDonorDto.longitude
+      ? {
+          type: 'Point',
+          coordinates: [createDonorDto.longitude, createDonorDto.latitude] // PostGIS uses [lng, lat] order
+        } as Point
+      : undefined;
 
-    try {
-      // Check for existing email
-      try {
-        await auth.getUserByEmail(email);
-        throw new ConflictException('Email already registered');
-      } catch (error) {
-        if (error.code !== 'auth/user-not-found') throw error;
-      }
-
-      // Create auth user
-      const userRecord = await auth.createUser({
-        email,
-        password,
-        displayName: name,
-        disabled: false
-      });
-
-      // Prepare donor data
-      const donorData: Omit<Donor, 'id'> = {
-        name,
-        email,
-        bloodGroup: createDonorDto.bloodGroup,
-        phone: createDonorDto.phone,
-        lastDonation: createDonorDto.lastDonation || new Date().toISOString(),
-        isActive: true,
-        location: null,
-        createdAt: new Date().toISOString()
-      };
-
-      // Save to Firestore
-      await firestore.collection(this.donorsCollection)
-        .doc(userRecord.uid)
-        .set(donorData);
-
-      return { id: userRecord.uid, ...donorData };
-    } catch (error) {
-      if (error instanceof ConflictException) throw error;
-      throw new InternalServerErrorException('Failed to create donor');
-    }
-  }
-
-  /**
-   * Updates donor location (with timestamp)
-   */
-  async updateLocation(donorId: string, updateLocationDto: UpdateLocationTrackingDto): Promise<void> {
-    const firestore = this.firebaseService.getFirestore();
-    const batch = firestore.batch();
-
-    const donorRef = firestore.collection(this.donorsCollection).doc(donorId);
-    const locationRef = firestore.collection(this.locationCollection).doc();
-
-    const locationData = {
-      ...updateLocationDto,
-      donorId,
-      timestamp: new Date().toISOString()
-    };
-
-    // Update both donor record and location history in transaction
-    batch.update(donorRef, { location: updateLocationDto });
-    batch.set(locationRef, locationData);
-
-    try {
-      await batch.commit();
-    } catch (error) {
-      throw new NotFoundException('Donor not found or update failed');
-    }
-  }
-
-  /**
-   * Finds donors with optional filters
-   */
-  async findAll(filterDto?: FilterDonorDto): Promise<Donor[]> {
-    const firestore = this.firebaseService.getFirestore();
-    let query = firestore.collection(this.donorsCollection).where('isActive', '==', true);
-
-    if (filterDto?.bloodGroup) {
-      query = query.where('bloodGroup', '==', filterDto.bloodGroup);
-    }
-
-    const snapshot = await query.get();
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Donor));
-  }
-
-  /**
-   * Gets donor by ID with existence check
-   */
-  async findOne(id: string): Promise<Donor> {
-    const doc = await this.firebaseService.getFirestore()
-      .collection(this.donorsCollection)
-      .doc(id)
-      .get();
-
-    if (!doc.exists) throw new NotFoundException('Donor not found');
-    return { id: doc.id, ...doc.data() } as Donor;
-  }
-
-  /**
-   * Updates donor profile with auth sync
-   */
-  async update(id: string, updateDonorDto: UpdateDonorDto): Promise<Donor> {
-    const firestore = this.firebaseService.getFirestore();
-    const auth = this.firebaseService.getAuth();
-
-    try {
-      // Update Auth first
-      const authUpdates = {};
-      if (updateDonorDto.email) authUpdates['email'] = updateDonorDto.email;
-      if (updateDonorDto.name) authUpdates['displayName'] = updateDonorDto.name;
-      
-      if (Object.keys(authUpdates).length > 0) {
-        await auth.updateUser(id, authUpdates);
-      }
-
-      // Then update Firestore
-      await firestore.collection(this.donorsCollection)
-        .doc(id)
-        .set(updateDonorDto, { merge: true });
-
-      return this.findOne(id);
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
-        throw new NotFoundException('Donor not found');
-      }
-      throw new InternalServerErrorException('Update failed');
-    }
-  }
-
-  /**
-   * Gets eligible donors (last donation > 3 months ago)
-   */
-  async getEligibleDonors(): Promise<Donor[]> {
-    const donors = await this.findAll();
-    const cutoffDate = new Date();
-    cutoffDate.setMonth(cutoffDate.getMonth() - this.minDonationInterval);
-
-    return donors.filter(donor => {
-      const lastDonationDate = new Date(donor.lastDonation);
-      return lastDonationDate <= cutoffDate;
+    const newDonor = this.donorRepository.create({
+      ...createDonorDto,
+      password: hashedPassword,
+      location,
+      lastDonation: createDonorDto.lastDonation
+        ? new Date(createDonorDto.lastDonation)
+        : undefined,
     });
+
+    return await this.donorRepository.save(newDonor);
   }
 
-  /**
- * Finds a donor by email (case-sensitive exact match)
- */
-async findByEmail(email: string): Promise<Donor | null> {
-  const firestore = this.firebaseService.getFirestore();
-  
-  try {
-    const snapshot = await firestore.collection(this.donorsCollection)
-      .where('email', '==', email)
-      .limit(1)
-      .get();
+  async findAll(filterDto: FilterDonorDto): Promise<Donor[]> {
+    const query = this.donorRepository.createQueryBuilder('donor');
 
-    if (snapshot.empty) {
-      return null;
+    if (filterDto.bloodGroup) {
+      query.andWhere('donor.bloodGroup = :bloodGroup', {
+        bloodGroup: filterDto.bloodGroup,
+      });
     }
 
-    const doc = snapshot.docs[0];
-    return { 
-      id: doc.id,
-      name: doc.data().name,
-      email: doc.data().email,
-      bloodGroup: doc.data().bloodGroup,
-      phone: doc.data().phone,
-      lastDonation: doc.data().lastDonation,
-      isActive: doc.data().isActive,
-      location: doc.data().location,
-      createdAt: doc.data().createdAt
-    } as Donor;
-  } catch (error) {
-    throw new InternalServerErrorException('Failed to find donor by email');
+    return await query.getMany();
   }
+
+  async findOne(id: string): Promise<Donor | null> {
+    return await this.donorRepository.findOneBy({ id });
+  }
+
+  async findByEmail(email: string): Promise<Donor | null> {
+    return await this.donorRepository.findOneBy({ email });
+  }
+
+  async update(id: string, updateDonorDto: UpdateDonorDto): Promise<Donor> {
+    const donor = await this.donorRepository.findOneBy({ id });
+
+    if (!donor) {
+      throw new NotFoundException(`Donor with ID ${id} not found`);
+    }
+
+    if (updateDonorDto.password) {
+      updateDonorDto.password = await bcrypt.hash(updateDonorDto.password, 10);
+    }
+
+    // Handle location update
+    if (
+      updateDonorDto.latitude !== undefined &&
+      updateDonorDto.longitude !== undefined
+    ) {
+      donor.location = {
+        type: 'Point',
+        coordinates: [updateDonorDto.longitude, updateDonorDto.latitude]
+      } as Point;
+    }
+
+    // Remove latitude and longitude from the DTO before using Object.assign
+    // These properties likely don't exist on the Donor entity directly
+    const { latitude, longitude, ...updateData } = updateDonorDto;
+    
+    Object.assign(donor, updateData);
+
+    return this.donorRepository.save(donor);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.donorRepository.delete(id);
+  }
+  
+  // ✅ Find nearby donors using PostGIS and return lat/lng extracted
+async findNearbyDonors(
+  latitude: number,
+  longitude: number,
+  radiusKm: number,
+  bloodType: string,
+): Promise<(Donor & { lat: number; lng: number })[]> {
+  const query = this.donorRepository
+    .createQueryBuilder('donor')
+    .addSelect(`ST_Y(donor.location)`, 'lat')
+    .addSelect(`ST_X(donor.location)`, 'lng')
+    .where(
+      `ST_DWithin(
+        donor.location,
+        ST_MakePoint(:lng, :lat)::geography,
+        :radius
+      )`,
+      {
+        lng: longitude,
+        lat: latitude,
+        radius: radiusKm * 1000,
+      },
+    );
+
+   // Only add the blood group filter if bloodType is provided
+   if (bloodType) {
+    query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup: bloodType });
+  }
+
+  const raw = await query.getRawAndEntities();
+
+  // Map entities to include the extracted lat/lng values
+  return raw.entities.map((donor, i) => ({
+    ...donor,
+    lat: parseFloat(raw.raw[i].lat),
+    lng: parseFloat(raw.raw[i].lng),
+  }));
 }
 
-  /**
-   * Deletes donor with cleanup
-   */
-  async remove(id: string): Promise<void> {
-    const firestore = this.firebaseService.getFirestore();
-    const auth = this.firebaseService.getAuth();
 
-    try {
-      // Soft delete (recommended instead of hard delete)
-      await firestore.collection(this.donorsCollection)
-        .doc(id)
-        .update({ isActive: false });
+async getBloodGroupInsufficientDonors(bloodGroup: string) {
+  // Implementation depends on your business logic
+  // Example implementation:
+  const threshold = 5; // Define what "insufficient" means (e.g., less than 5 donors)
+  
+  const count = await this.donorRepository.count({
+    where: { bloodGroup }
+  });
+  
+  return {
+    bloodGroup,
+    count,
+    isInsufficient: count < threshold
+  };
+}
+  
 
-      // Optionally disable auth account
-      await auth.updateUser(id, { disabled: true });
-    } catch (error) {
-      if (error.code === 'auth/user-not-found' || error.code === 5) {
-        throw new NotFoundException('Donor not found');
-      }
-      throw new InternalServerErrorException('Deletion failed');
-    }
+  // Compatibility function for blood groups
+  private getCompatibleBloodGroups(bloodGroup: string): string[] {
+    const compatibility = {
+      'O-': ['O-'],
+      'O+': ['O-', 'O+'],
+      'A-': ['O-', 'A-'],
+      'A+': ['O-', 'O+', 'A-', 'A+'],
+      'B-': ['O-', 'B-'],
+      'B+': ['O-', 'O+', 'B-', 'B+'],
+      'AB-': ['O-', 'A-', 'B-', 'AB-'],
+      'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
+    };
+    return compatibility[bloodGroup] || [];
   }
 }

@@ -1,5 +1,5 @@
 import { IsString, IsNotEmpty, IsEmail, IsPhoneNumber, IsIn } from 'class-validator';
-import { bloodTypes } from '../dto/constants';
+import { bloodTypes } from './constants';
 
 export class CreateHospitalDto {
   @IsString()
