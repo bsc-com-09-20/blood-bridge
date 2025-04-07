@@ -6,9 +6,10 @@ import * as bcrypt from 'bcrypt';
 import { Point } from 'geojson';
 
 import { LoginDto } from './dto/login.dto';
-import {  CreateDonorDto } from '../donor/dto/create-donor.dto';
+import { CreateDonorDto } from '../donor/dto/create-donor.dto';
 import { Donor } from 'src/donor/entities/donor.entity';
 import { Hospital } from 'src/hospital/entities/hospital.entity';
+import { LoginResponseDto } from './dto/login-response.dto';
 
 interface AuthPayload {
   id: string;
@@ -20,14 +21,13 @@ interface AuthPayload {
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    
+
     @InjectRepository(Donor)
     private donorRepo: Repository<Donor>,
-    
+
     @InjectRepository(Hospital)
     private hospitalRepo: Repository<Hospital>,
   ) {}
-
   async login(loginDto: LoginDto) {
     const { email, password, latitude, longitude } = loginDto;
     
@@ -65,10 +65,12 @@ export class AuthService {
       // Remove password from returned user object
       const { password: _, ...donorWithoutPassword } = donor;
       
+      // In auth.service.ts login method
       return {
-        access_token: this.jwtService.sign(payload),
-        user: donorWithoutPassword,
-        role: 'donor'
+        token: this.jwtService.sign(payload),
+        userId: donor.id.toString(),  // or hospital.id.toString()
+        role: 'donor',  // or 'hospital'
+        name: donor.name  // or hospital.name
       };
     }
     
@@ -102,53 +104,68 @@ export class AuthService {
       // Remove password from returned user object
       const { password: _, ...hospitalWithoutPassword } = hospital;
       
+     // In auth.service.ts login method
       return {
-        access_token: this.jwtService.sign(payload),
-        user: hospitalWithoutPassword,
-        role: 'hospital'
+        token: this.jwtService.sign(payload),
+        userId: hospital.id.toString(),  // or hospital.id.toString()
+        role: 'hospital',  // or 'hospital'
+        name: hospital.name  // or hospital.name
       };
     }
     
     throw new UnauthorizedException('Invalid email or password');
   }
   
-  async registerDonor(dto: CreateDonorDto) {
-    // Check if email already exists
+  async registerDonor(dto: CreateDonorDto): Promise<LoginResponseDto> {
     const existingDonor = await this.donorRepo.findOne({
-      where: { email: dto.email }
+      where: { email: dto.email },
     });
-    
+  
     if (existingDonor) {
       throw new UnauthorizedException('Email already registered');
     }
-    
-    // Hash password
+  
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    
-    // Create GeoJSON Point for location
+  
     let location: Point | undefined;
     if (dto.latitude && dto.longitude) {
       location = {
         type: 'Point',
-        coordinates: [dto.longitude, dto.latitude] // GeoJSON uses [longitude, latitude] order
+        coordinates: [dto.longitude, dto.latitude],
       };
     }
-    
-    // Create new donor with location
+  
     const newDonor = this.donorRepo.create({
       name: dto.name,
       email: dto.email,
       phone: dto.phone,
       bloodGroup: dto.bloodGroup,
       password: hashedPassword,
-      location
+      location,
     });
-    
+  
     const savedDonor = await this.donorRepo.save(newDonor);
-    
-    // Remove password from response
-    delete savedDonor.password;
-    
-    return savedDonor;
+  
+    // Create JWT payload
+    const payload: AuthPayload = {
+      id: savedDonor.id.toString(),
+      email: savedDonor.email,
+      role: 'donor',
+    };
+  
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: savedDonor.id.toString(),
+        email: savedDonor.email,
+        name: savedDonor.name,
+        bloodGroup: savedDonor.bloodGroup,
+        phone: savedDonor.phone,
+        lastDonation: savedDonor.lastDonation,
+        location: savedDonor.location,
+      },
+      role: 'donor',
+    };
   }
+  
 }

@@ -15,6 +15,7 @@ import { BloodInventory } from './blood-inventory/entities/blood-inventory.entit
 import { BloodRequest } from './blood-request/entities/blood-request.entity';
 import { Hospital } from './hospital/entities/hospital.entity';
 import { AuthModule } from './auth/auth.module';
+import { BloodTypeModule } from './blood-type/blood-type/blood-type.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AuthModule } from './auth/auth.module';
     SettingsModule,
     NotificationModule,
     DonorModule,
+    BloodTypeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

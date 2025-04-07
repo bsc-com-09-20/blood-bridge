@@ -15,6 +15,9 @@ export class Donor {
   @Column({ type: 'date', nullable: true })
   lastDonation?: Date; // Now optional
 
+  @Column({ type: 'int', nullable: true, default: 0 })
+  donations?: number;
+
   @Column({ unique: true })
   email: string;
 

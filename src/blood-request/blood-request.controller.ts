@@ -15,8 +15,6 @@ export class BloodRequestController {
   constructor(private readonly service: BloodRequestService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @HospitalOnly()
   async createRequest(
     @Body() body: CreateBloodRequestDto,
     @Req() req

@@ -8,17 +8,28 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Strip unknown properties
+      forbidNonWhitelisted: false, // <-- allow extra props like 'role'
+      transform: true,
+    }),
+  );
+  
   //app.useGlobalFilters(new HttpExceptionFilter());
 
   // Configure Swagger options
   const config = new DocumentBuilder()
-    .setTitle('My API')
-    .setDescription('The API description')
+    .setTitle('Blood-bridge')
+    .setDescription('This is blood bridge api')
     .setVersion('1.0')
     .addTag('api') // Optional: group endpoints by tag
     .build();
-  app.enableCors();
+  app.enableCors(
+    {
+      origin: '*',
+    }
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

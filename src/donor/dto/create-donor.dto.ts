@@ -25,6 +25,10 @@ export class CreateDonorDto {
   @IsDate()
   @Type(() => Date)
   lastDonation?: Date;
+  
+  @IsOptional()
+  @IsNumber()
+  donations?: number;
 
   @IsNotEmpty()
   @IsEmail()
