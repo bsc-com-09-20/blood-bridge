@@ -1,38 +1,50 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-//import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe());
-  //app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Configure Swagger options
-  const config = new DocumentBuilder()
-    .setTitle('My API')
-    .setDescription('The API description')
-    .setVersion('1.0')
-    .addTag('api') // Optional: group endpoints by tag
-    .build();
-  app.enableCors();
+  // Enhanced CORS configuration
+  app.enableCors({
+    origin: [
+      'http://localhost:3000', // Your NestJS server (for Swagger)
+      'http://localhost', // Common Flutter web debugging
+      'http://localhost:XXXX', // Replace XXXX with your Flutter web port
+      'http://10.0.2.2:3000', // Android emulator access to localhost
+      'http://<YOUR_LOCAL_IP>:3000', // For physical device testing
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Accept,Authorization',
+    credentials: true,
+  });
+
+  // Validation Pipe configuration
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true, // Helps with query/param conversion
+      },
     }),
   );
 
-  // Create the Swagger document
-  const document = SwaggerModule.createDocument(app, config);
+  // Swagger configuration
+  const config = new DocumentBuilder()
+    .setTitle('My API')
+    .setDescription('The API description')
+    .setVersion('1.0')
+    .addBearerAuth() // If you're using JWT authentication
+    .addTag('api')
+    .build();
 
-  // Setup the Swagger UI endpoint (e.g., http://localhost:3000/api)
+  const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3004);
+  await app.listen(3007);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

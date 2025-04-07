@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-//import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
 import { HospitalModule } from './hospital/hospital.module';
 import { BloodRequestModule } from './blood-request/blood-request.module';
 import { SettingsModule } from './settings/settings.module';
@@ -19,7 +18,6 @@ import { AuthModule } from './auth/auth/auth.module';
 
 @Module({
   imports: [
-    // Load environment variables globally
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: path.resolve(__dirname, '../.env'),
@@ -27,18 +25,16 @@ import { AuthModule } from './auth/auth/auth.module';
 
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST ?? 'localhost',
-      port: parseInt(process.env.DATABASE_PORT ?? '5432', 10),
-      username: process.env.DATABASE_USERNAME ?? 'postgres',
-      password: process.env.DATABASE_PASSWORD ?? '1902',
-      database: process.env.DATABASE_NAME ?? 'blood_bridge_db',
-      entities: [Donor, BloodInventory, BloodRequest, Hospital], // Add your entities here
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432', 10),
+      username: process.env.DATABASE_USERNAME || 'postgres',
+      password: process.env.DATABASE_PASSWORD || '',
+      database: process.env.DATABASE_NAME || 'blood_bridge_db',
+      entities: [Donor, BloodInventory, BloodRequest, Hospital],
       synchronize: true, // Set to false in production
       autoLoadEntities: true,
     }),
-    
-    // Feature Modules
-    //BloodInventoryModule,
+
     HospitalModule,
     BloodRequestModule,
     SettingsModule,
