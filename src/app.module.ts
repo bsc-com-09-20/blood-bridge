@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-//import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
 import { HospitalModule } from './hospital/hospital.module';
 import { BloodRequestModule } from './blood-request/blood-request.module';
 import { SettingsModule } from './settings/settings.module';
@@ -16,10 +15,10 @@ import { BloodRequest } from './blood-request/entities/blood-request.entity';
 import { Hospital } from './hospital/entities/hospital.entity';
 import { AuthModule } from './auth/auth.module';
 import { BloodTypeModule } from './blood-type/blood-type/blood-type.module';
+import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
 
 @Module({
   imports: [
-    // Load environment variables globally
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: path.resolve(__dirname, '../.env'),
@@ -39,7 +38,7 @@ import { BloodTypeModule } from './blood-type/blood-type/blood-type.module';
     }),
     
     // Feature Modules
-    //BloodInventoryModule,
+    BloodInventoryModule,
     AuthModule,
     HospitalModule,
     BloodRequestModule,
