@@ -1,44 +1,28 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-  } from 'typeorm';
-  import { IsEmail, IsOptional, IsString, IsNumber } from 'class-validator';
-  
-  @Entity()
-  export class Hospital {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
-  
-    @Column({ unique: true })
-    @IsEmail()
-    email: string;
-  
-    @Column({ select: false })
-    @IsString()
-    password: string;
-  
-    @Column('float', { nullable: true })
-    @IsOptional()
-    @IsNumber()
-    latitude?: number;
-  
-    @Column('float', { nullable: true })
-    @IsOptional()
-    @IsNumber()
-    longitude?: number;
-  
-    @Column({ nullable: true })
-    @IsOptional()
-    @IsString()
-    geohash?: string;
-  
-    @CreateDateColumn()
-    createdAt: Date;
-  
-    @UpdateDateColumn()
-    updatedAt: Date;
-  }
-  
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+
+@Entity()
+export class Hospital {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ unique: true })
+  email: string;
+
+  @Column()
+  password: string;
+
+  @Column()
+  name: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  latitude: number;
+
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  longitude: number;
+
+  @Column({ type: 'geography', spatialFeatureType: 'Point', srid: 4326, nullable: true })
+  location: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  last_login: Date;
+}

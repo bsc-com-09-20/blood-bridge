@@ -3,19 +3,27 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DonorService } from './donor.service';
 import { DonorController } from './donor.controller';
 import { Donor } from './entities/donor.entity';
-import { JwtModule } from '@nestjs/jwt';  // Import JwtModule
-import { Reflector } from '@nestjs/core';  // Import Reflector
-import { AuthGuard } from 'src/auth/auth/auth.guard';
+import { JwtModule } from '@nestjs/jwt';
+import { Reflector } from '@nestjs/core';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Donor]),  // Import TypeORM for Donor entity
+    TypeOrmModule.forFeature([Donor]),
     JwtModule.register({
-      secret: 'secretKey',  // Set your JWT secret key here
-      signOptions: { expiresIn: '1d' },  // Set expiration options
+      secret: 'secretKey',
+      signOptions: { expiresIn: '1d' },
     }),
   ],
   controllers: [DonorController],
-  providers: [DonorService, AuthGuard, Reflector],  // Register AuthGuard and Reflector
+  providers: [
+    DonorService,
+    {
+      provide: 'APP_GUARD',
+      useClass: AuthGuard,
+    },
+    Reflector,
+  ],
+  exports: [DonorService, TypeOrmModule], // Crucial: Export both the service and TypeOrmModule
 })
 export class DonorModule {}

@@ -3,9 +3,11 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BloodInventoryService } from './blood-inventory.service';
 import { CreateBloodInventoryDto } from './dto/create-blood-inventory.dto';
 import { UpdateBloodInventoryDto } from './dto/update-blood-inventory.dto';
+import { AuthGuard, Public } from 'src/auth/auth.guard';
 
 @ApiTags('blood-inventory')
 @Controller('blood-inventory')
+@Public()
 export class BloodInventoryController {
   constructor(private readonly bloodInventoryService: BloodInventoryService) {}
 
@@ -40,3 +42,6 @@ export class BloodInventoryController {
     return this.bloodInventoryService.remove(Number(id)); // ✅
   }
 }
+
+
+

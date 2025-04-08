@@ -1,3 +1,4 @@
+// src/blood-inventory/entities/blood-inventory.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()

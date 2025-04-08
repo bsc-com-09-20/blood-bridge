@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Point } from 'geojson';
 
 @Entity()
 export class Donor {
@@ -14,6 +15,9 @@ export class Donor {
   @Column({ type: 'date', nullable: true })
   lastDonation?: Date; // Now optional
 
+  @Column({ type: 'int', nullable: true, default: 0 })
+  donations?: number;
+
   @Column({ unique: true })
   email: string;
 
@@ -23,12 +27,14 @@ export class Donor {
   @Column({ nullable: true, select: false })
   password?: string;
 
-  @Column({ type: 'jsonb', nullable: true })
-  location?: {
-    latitude: number;
-    longitude: number;
-    geohash: string;
-  };
+  // Replace both location properties with this single definition
+  @Column({
+    type: 'geography',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true
+  })
+  location?: Point;
 
   @CreateDateColumn()
   createdAt: Date;

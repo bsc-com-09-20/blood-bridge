@@ -1,45 +1,34 @@
-import { 
-  IsEmail, 
-  IsNotEmpty, 
-  IsString, 
-  Matches, 
-  MinLength, 
-  IsOptional, 
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MinLength,
+  IsOptional,
+  IsEnum,
   IsNumber,
   IsDate,
-  ValidateNested 
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BloodType } from '../../common/enums/blood-type.enum';
 
-// ✅ Location DTO for nested validation
-export class LocationDto {
-  @IsOptional()
-  @IsNumber()
-  latitude?: number;
-
-  @IsOptional()
-  @IsNumber()
-  longitude?: number;
-
-  @IsOptional()
-  @IsString()
-  geohash?: string;
-}
-
-// ✅ Donor DTO with proper validation
 export class CreateDonorDto {
   @IsNotEmpty()
   @IsString()
   name: string;
 
   @IsNotEmpty()
-  @IsString()
-  bloodGroup: string;
+  @IsEnum(BloodType)
+  bloodGroup: BloodType;
 
   @IsOptional()
-  @IsDate() // ✅ Ensures it's a valid date
-  @Type(() => Date) // ✅ Converts input into a Date object
+  @IsDate()
+  @Type(() => Date)
   lastDonation?: Date;
+  
+  @IsOptional()
+  @IsNumber()
+  donations?: number;
 
   @IsNotEmpty()
   @IsEmail()
@@ -56,7 +45,10 @@ export class CreateDonorDto {
   password: string;
 
   @IsOptional()
-  @ValidateNested()
-  @Type(() => LocationDto)
-  location?: LocationDto;
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
 }

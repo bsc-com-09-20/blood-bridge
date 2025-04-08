@@ -5,22 +5,28 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Strip unknown properties
+      forbidNonWhitelisted: false, // <-- allow extra props like 'role'
+      transform: true,
+    }),
+  );
+  
+  //app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Enhanced CORS configuration
-  app.enableCors({
-    origin: [
-      'http://localhost:3000', // Your NestJS server (for Swagger)
-      'http://localhost', // Common Flutter web debugging
-      'http://localhost:XXXX', // Replace XXXX with your Flutter web port
-      'http://10.0.2.2:3000', // Android emulator access to localhost
-      'http://<YOUR_LOCAL_IP>:3000', // For physical device testing
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type,Accept,Authorization',
-    credentials: true,
-  });
-
-  // Validation Pipe configuration
+  // Configure Swagger options
+  const config = new DocumentBuilder()
+    .setTitle('Blood-bridge')
+    .setDescription('This is blood bridge api')
+    .setVersion('1.0')
+    .addTag('api') // Optional: group endpoints by tag
+    .build();
+  app.enableCors(
+    {
+      origin: '*',
+    }
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -32,14 +38,7 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('My API')
-    .setDescription('The API description')
-    .setVersion('1.0')
-    .addBearerAuth() // If you're using JWT authentication
-    .addTag('api')
-    .build();
+  
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
