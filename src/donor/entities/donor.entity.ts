@@ -19,7 +19,7 @@ export class Donor {
   email: string;
 
   @Column({ length: 15 })
-  phoneNumber: string;
+  phone: string;
 
   @Column({ nullable: true, select: false })
   password?: string;

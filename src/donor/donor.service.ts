@@ -93,45 +93,44 @@ export class DonorService {
     await this.donorRepository.delete(id);
   }
   
-  // ✅ Find nearby donors using PostGIS and return lat/lng extracted
-async findNearbyDonors(
-  latitude: number,
-  longitude: number,
-  radiusKm: number,
-  bloodType: string,
-): Promise<(Donor & { lat: number; lng: number })[]> {
-  const query = this.donorRepository
-    .createQueryBuilder('donor')
-    .addSelect(`ST_Y(donor.location)`, 'lat')
-    .addSelect(`ST_X(donor.location)`, 'lng')
-    .where(
-      `ST_DWithin(
-        donor.location,
-        ST_MakePoint(:lng, :lat)::geography,
-        :radius
-      )`,
-      {
-        lng: longitude,
-        lat: latitude,
-        radius: radiusKm * 1000,
-      },
-    );
-
-   // Only add the blood group filter if bloodType is provided
-   if (bloodType) {
-    query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup: bloodType });
+  async findNearbyDonors(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+    bloodType?: string,  // optional filter for blood type
+  ): Promise<(Donor & { lat: number; lng: number })[]> {
+    const query = this.donorRepository
+      .createQueryBuilder('donor')
+      .addSelect(`ST_Y(donor.location)`, 'lat')
+      .addSelect(`ST_X(donor.location)`, 'lng')
+      .where(
+        `ST_DWithin(
+          donor.location,
+          ST_MakePoint(:lng, :lat)::geography,
+          :radius
+        )`,
+        {
+          lng: longitude,
+          lat: latitude,
+          radius: radiusKm * 1000,
+        },
+      );
+  
+    // Only add the blood group filter if bloodType is provided
+    if (bloodType) {
+      query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup: bloodType });
+    }
+  
+    const raw = await query.getRawAndEntities();
+  
+    // Map entities to include the extracted lat/lng values
+    return raw.entities.map((donor, i) => ({
+      ...donor,
+      lat: parseFloat(raw.raw[i].lat),
+      lng: parseFloat(raw.raw[i].lng),
+    }));
   }
-
-  const raw = await query.getRawAndEntities();
-
-  // Map entities to include the extracted lat/lng values
-  return raw.entities.map((donor, i) => ({
-    ...donor,
-    lat: parseFloat(raw.raw[i].lat),
-    lng: parseFloat(raw.raw[i].lng),
-  }));
-}
-
+  
 
 async getBloodGroupInsufficientDonors(bloodGroup: string) {
   // Implementation depends on your business logic
