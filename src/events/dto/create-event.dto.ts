@@ -1,16 +1,24 @@
 /* eslint-disable prettier/prettier */
-import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsDateString } from 'class-validator';
 
 export class CreateEventDto {
-  @ApiProperty({ description: 'The title of the event' })
+  @IsString()
+  @IsNotEmpty()
   title: string;
 
-  @ApiProperty({ description: 'A brief description of the event' })
+  @IsString()
+  @IsNotEmpty()
   description: string;
 
-  @ApiProperty({ description: 'Date of the event (ISO format)' })
-  date: Date;
+  @IsDateString()
+  @IsNotEmpty()
+  eventDate: Date;
 
-  @ApiProperty({ description: 'Location where the event will take place' })
-  location: string;
+  @IsString()
+  @IsOptional()
+  location?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isPublished?: boolean;
 }

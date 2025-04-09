@@ -1,5 +1,4 @@
-/* eslint-disable prettier/prettier */
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import { CreateEventDto } from './create-event.dto';
 
 export class UpdateEventDto extends PartialType(CreateEventDto) {}

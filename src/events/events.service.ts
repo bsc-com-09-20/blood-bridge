@@ -1,200 +1,98 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { FirebaseService } from 'src/firebase/firebase.service';
-import { CreateEventDto } from './dto/create-event.dto';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Event } from './entities/event.entity';
-import { FilterEventDto } from './dto/filter-event.dto';
+import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventsService {
-  private readonly eventsCollection = 'events';
+  private readonly logger = new Logger(EventsService.name);
 
-  constructor(private readonly firebaseService: FirebaseService) {}
+  constructor(
+    @InjectRepository(Event)
+    private eventsRepository: Repository<Event>,
+  ) {}
 
-  async create(createEventDto: CreateEventDto): Promise<Event> {
-    const firestore = this.firebaseService.getFirestore();
-    
-    try {
-      // Check if an event with the same title and date already exists to avoid duplicates
-      const snapshot = await firestore.collection(this.eventsCollection)
-        .where('title', '==', createEventDto.title)
-        .where('date', '==', createEventDto.date)
-        .limit(1)
-        .get();
-
-      if (!snapshot.empty) {
-        throw new ConflictException('An event with the same title and date already exists');
-      }
-
-      const newEvent: Omit<Event, 'id'> = {
-        title: createEventDto.title,
-        description: createEventDto.description,
-        date: createEventDto.date,
-        location: createEventDto.location,
-      };
-
-      // Let Firestore auto-generate an ID for the new event
-      const docRef = await firestore.collection(this.eventsCollection).add(newEvent);
-
-      return {
-        // Convert the Firestore-generated string ID to a number
-        id: parseInt(docRef.id, 10),
-        ...newEvent,
-      } as Event;
-    } catch (error) {
-      if (error instanceof ConflictException) throw error;
-      throw new Error(`Failed to create event: ${error.message}`);
-    }
-  }
-
-  async findAll(filterDto?: FilterEventDto): Promise<Event[]> {
-    const firestore = this.firebaseService.getFirestore();
-    const query = firestore.collection(this.eventsCollection);
-    
-    const snapshot = await query.get();
-    
-    if (snapshot.empty) return [];
-
-    let events = snapshot.docs.map(doc => ({
-      id: parseInt(doc.id, 10),
-      ...doc.data(),
-    })) as Event[];
-
-    // Update filter: use 'title' instead of a non-existent 'name' property
-    if (filterDto?.title) {
-      const titleLower = filterDto.title.toLowerCase();
-      events = events.filter(event => event.title.toLowerCase().includes(titleLower));
-    }
-
-    if (filterDto?.date) {
-      events = events.filter(event => event.date === filterDto.date);
-    }
-
-    return events;
+  async findAll(): Promise<Event[]> {
+    return this.eventsRepository.find();
   }
 
   async findOne(id: string): Promise<Event> {
-    const firestore = this.firebaseService.getFirestore();
-    const eventDoc = await firestore.collection(this.eventsCollection).doc(id).get();
+    const event = await this.eventsRepository.findOne({ where: { id } });
     
-    if (!eventDoc.exists) {
-      throw new NotFoundException('Event not found');
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${id} not found`);
     }
-
-    return { id: parseInt(eventDoc.id, 10), ...eventDoc.data() } as Event;
+    
+    return event;
   }
 
-  async findByTitle(title: string): Promise<Event | null> {
-    const firestore = this.firebaseService.getFirestore();
-    const snapshot = await firestore.collection(this.eventsCollection)
-      .where('title', '==', title)
-      .limit(1)
-      .get();
+  async create(createEventDto: CreateEventDto): Promise<Event> {
+    this.logger.log(`Creating event with data: ${JSON.stringify(createEventDto)}`);
     
-    if (snapshot.empty) return null;
-
-    const doc = snapshot.docs[0];
-    return { id: parseInt(doc.id, 10), ...doc.data() } as Event;
+    // Create a new event entity and map properties from DTO
+    const newEvent = this.eventsRepository.create({
+      title: createEventDto.title,
+      description: createEventDto.description,
+      eventDate: createEventDto.eventDate,
+      location: createEventDto.location,
+      isPublished: createEventDto.isPublished ?? false // Default to false if not provided
+    });
+    
+    this.logger.debug(`Event entity prepared: ${JSON.stringify(newEvent)}`);
+    
+    // Save to database and return the saved entity
+    try {
+      const savedEvent = await this.eventsRepository.save(newEvent);
+      this.logger.log(`Event saved successfully with ID: ${savedEvent.id}`);
+      return savedEvent;
+    } catch (error) {
+      this.logger.error(`Error saving event to database: ${error.message}`, error.stack);
+      throw error; // Let controller handle specific error responses
+    }
   }
 
   async update(id: string, updateEventDto: UpdateEventDto): Promise<Event> {
-    const firestore = this.firebaseService.getFirestore();
+    const event = await this.findOne(id);
     
-    try {
-      const eventRef = firestore.collection(this.eventsCollection).doc(id);
-      const eventDoc = await eventRef.get();
-      
-      if (!eventDoc.exists) {
-        throw new NotFoundException('Event not found');
-      }
-
-      // Check for duplicate title if title is being updated
-      if (updateEventDto.title) {
-        const existingEvent = await this.findByTitle(updateEventDto.title);
-        if (existingEvent && existingEvent.id !== parseInt(id, 10)) {
-          throw new ConflictException('An event with this title already exists');
-        }
-      }
-
-      await eventRef.set(updateEventDto, { merge: true });
-
-      const updatedEventDoc = await eventRef.get();
-      return { id: parseInt(updatedEventDoc.id, 10), ...updatedEventDoc.data() } as Event;
-    } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ConflictException) throw error;
-      throw new Error(`Failed to update event: ${error.message}`);
-    }
+    // Update the event with the provided data
+    Object.assign(event, updateEventDto);
+    
+    return this.eventsRepository.save(event);
   }
 
   async remove(id: string): Promise<void> {
-    const firestore = this.firebaseService.getFirestore();
+    const result = await this.eventsRepository.delete(id);
     
-    try {
-      const eventRef = firestore.collection(this.eventsCollection).doc(id);
-      const eventDoc = await eventRef.get();
-      
-      if (!eventDoc.exists) {
-        throw new NotFoundException('Event not found');
-      }
-
-      await eventRef.delete();
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new Error(`Failed to delete event: ${error.message}`);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Event with ID ${id} not found`);
     }
   }
 
-  /**
-   * Returns all events whose event date is in the future (upcoming events).
-   */
-  async getUpcomingEvents(): Promise<Event[]> {
-    const events = await this.findAll();
-    const now = new Date();
-    
-    return events.filter(event => {
-      // Ensure event.date is a string before parsing
-      const eventDate = this.parseEventDate(
-        event.date instanceof Date ? event.date.toISOString() : event.date
-      );
-      return eventDate >= now;
-    });
-  }
-  
-  /**
-   * Returns all events that occurred in the past.
-   */
-  async getPastEvents(): Promise<Event[]> {
-    const events = await this.findAll();
-    const now = new Date();
-    
-    return events.filter(event => {
-      const eventDate = this.parseEventDate(
-        event.date instanceof Date ? event.date.toISOString() : event.date
-      );
-      return eventDate < now;
-    });
-  }
-  
-  /**
-   * Returns events happening in the next n days.
-   */
-  async getEventsInNextDays(days: number): Promise<Event[]> {
-    const events = await this.findAll();
-    const now = new Date();
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + days);
-    
-    return events.filter(event => {
-      const eventDate = this.parseEventDate(
-        event.date instanceof Date ? event.date.toISOString() : event.date
-      );
-      return eventDate >= now && eventDate <= futureDate;
-    });
-  }
-  
-  private parseEventDate(eventDate: string): Date {
-    return new Date(eventDate);
+  // Add a method to test database connection
+  async testDatabaseConnection(): Promise<any> {
+    try {
+      // Simple query to check connection
+      await this.eventsRepository.query('SELECT 1 as connection_test');
+      
+      // Try to create a test event
+      const testEvent = this.eventsRepository.create({
+        title: 'Database Test Event',
+        description: 'This event was created to test database connectivity',
+        eventDate: new Date(),
+        isPublished: false
+      });
+      
+      // Save but don't actually commit to database
+      return testEvent;
+    } catch (error) {
+      this.logger.error('Database connection test failed', error.stack);
+      throw error;
+    }
   }
 }

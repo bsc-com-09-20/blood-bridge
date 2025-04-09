@@ -1,40 +1,27 @@
-import { Controller, Post, Headers, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
+// src/auth/auth.controller.ts
+import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
+import { ApiTags, ApiBody } from '@nestjs/swagger';
+import {  CreateDonorDto } from '../donor/dto/create-donor.dto';
+import { Public } from './auth.guard';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
+  
+  @Public()
+  @Post('login')
+  @ApiBody({ type: LoginDto })
+  login(@Body() loginDto: LoginDto) {
+    return this.authService.login(loginDto);
+  }
 
-  @Post('verify-token')
-  async verifyUser(@Headers('Authorization') authHeader: string) {
-    if (!authHeader) {
-      throw new UnauthorizedException('No token provided');
-    }
-
-    try {
-      const token = authHeader.replace('Bearer ', '');
-      const userData = await this.authService.verifyToken(token);
-
-      const userRole = await this.authService.getUserRole(userData.uid);
-
-      if (userRole === 'unknown') {
-        throw new UnauthorizedException('User not found in the system');
-      }
-
-      return {
-        success: true,
-        uid: userData.uid,
-        email: userData.email,
-        role: userRole,
-      };
-    } catch (error) {
-      console.error('Auth Error:', error.message);
-
-      if (error instanceof UnauthorizedException) {
-        throw new UnauthorizedException(error.message);
-      }
-
-      throw new InternalServerErrorException('Something went wrong during authentication');
-    }
+  @Public()
+  @Post('register')
+  @ApiBody({ type: CreateDonorDto })
+  register(@Body() createDonorDto: CreateDonorDto) {
+    return this.authService.registerDonor(createDonorDto);
   }
 }

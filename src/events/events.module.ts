@@ -1,13 +1,14 @@
 /* eslint-disable prettier/prettier */
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { EventsService } from './events.service';
-import { EventController } from './events.controller';
-import { FirebaseModule } from '../firebase/firebase.module';
-
+import { EventsController } from './events.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
-  imports: [forwardRef(() => FirebaseModule)],
+  imports:[
+    TypeOrmModule.forFeature([Event])
+  ],
+  controllers: [EventsController],
   providers: [EventsService],
-  controllers: [EventController],
 })
 export class EventsModule {}

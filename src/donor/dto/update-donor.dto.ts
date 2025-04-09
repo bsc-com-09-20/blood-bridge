@@ -1,27 +1,54 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateDonorDto } from './create-donor.dto';
-import { IsEmail, IsNotEmpty, IsString, Matches, MinLength, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Matches,
+  IsNumber,
+  IsDate,
+  MinLength,
+  IsEnum,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { BloodType } from '../../common/enums/blood-type.enum';
 
 export class UpdateDonorDto {
-    @IsOptional()
-    @IsString()
-    name?: string;
-  
-    @IsOptional()
-    @IsString()
-    bloodGroup?: string;
-  
-    @IsOptional()
-    @IsString()
-    lastDonation?: string;
-  
-    @IsOptional()
-    @IsEmail()
-    email?: string;
-  
-    @IsOptional()
-    @Matches(/^\d{10}$/, { message: 'Phone number must be 10 digits' })
-    phone?: string;
-  }
-  
+  @IsOptional()
+  @IsString()
+  name?: string;
 
+  @IsOptional()
+  @IsEnum(BloodType)
+  bloodGroup?: BloodType;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  lastDonation?: Date;
+  
+  @IsOptional()
+  @IsNumber()
+  donations?: number;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(6)
+  password?: string;
+
+  @IsOptional()
+  @Matches(/^\+[1-9]\d{1,14}$/, {
+    message: 'Phone number must be in E.164 format',
+  })
+  phone?: string;
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
+}
