@@ -1,28 +1,35 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Point } from 'geojson';
 
 @Entity()
 export class Hospital {
-  @PrimaryGeneratedColumn()
-  id: number;
-
-  @Column({ unique: true })
-  email: string;
-
-  @Column()
-  password: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @Column()
   name: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  @Column()
+  email: string;
+
+  @Column({ select: false })
+  password: string;
+
+  // Add location as GeoJSON Point
+  @Column({
+    type: 'geography',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true
+  })
+  location: Point;
+
+  // Keep these for backward compatibility or if needed elsewhere
+  @Column({ type: 'float', nullable: true })
   latitude: number;
 
-  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  @Column({ type: 'float', nullable: true })
   longitude: number;
 
-  @Column({ type: 'geography', spatialFeatureType: 'Point', srid: 4326, nullable: true })
-  location: string;
-
-  @Column({ type: 'timestamp', nullable: true })
-  last_login: Date;
+  // Add any other fields your Hospital entity might need
 }

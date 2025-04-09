@@ -18,12 +18,16 @@ export class UpdateDonorDto {
 
   @IsOptional()
   @IsEnum(BloodType)
-  bloodType?: BloodType;
+  bloodGroup?: BloodType;
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
   lastDonation?: Date;
+  
+  @IsOptional()
+  @IsNumber()
+  donations?: number;
 
   @IsOptional()
   @IsEmail()
