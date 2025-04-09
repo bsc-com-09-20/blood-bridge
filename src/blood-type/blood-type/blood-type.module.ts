@@ -1,14 +1,14 @@
 // blood-type.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BloodTypeService } from './blood-type.service';
-import { BloodTypeController } from './blood-type.controller';
-import { BloodType } from './entities/blood-type.entity';
+import { BloodGroup } from './entities/blood-group.entity';
+import { BloodGroupService } from './blood-type.service';
+import { BloodGroupController } from './blood-type.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([BloodType])],
-  providers: [BloodTypeService],
-  controllers: [BloodTypeController],
-  exports: [BloodTypeService],
+  imports: [TypeOrmModule.forFeature([BloodGroup])],
+  providers: [BloodGroupService],
+  controllers: [BloodGroupController],
+  exports: [BloodGroupService],
 })
 export class BloodTypeModule {}
