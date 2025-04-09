@@ -19,7 +19,7 @@ export class Donor {
   email: string;
 
   @Column({ length: 15 })
-  phone: string;
+  phoneNumber: string;
 
   @Column({ nullable: true, select: false })
   password?: string;
@@ -29,9 +29,9 @@ export class Donor {
     type: 'geography',
     spatialFeatureType: 'Point',
     srid: 4326,
-    nullable: true
+    nullable: false
   })
-  location?: Point;
+  location: Point;
 
   @CreateDateColumn()
   createdAt: Date;

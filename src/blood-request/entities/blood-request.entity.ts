@@ -42,4 +42,11 @@ export class BloodRequest {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ default: false })
+  notificationSent: boolean;
+
+  @Column({ nullable: true })
+  notificationSentAt: Date;
+
 }

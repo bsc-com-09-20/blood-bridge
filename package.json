@@ -5,12 +5,12 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
-   "scripts": {
-   "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
-   "migration:create": "npm run typeorm -- migration:create -d src/data-source.ts -- -n",
-   "migration:generate": "npm run typeorm -- migration:generate -d src/data-source.ts -- -n",
-   "migration:run": "npm run typeorm -- migration:run -d src/data-source.ts",
-   "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
+  "scripts": {
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
+    "migration:create": "npm run typeorm -- migration:create -d src/data-source.ts -- -n",
+    "migration:generate": "npm run typeorm -- migration:generate -d src/data-source.ts -- -n",
+    "migration:run": "npm run typeorm -- migration:run -d src/data-source.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -49,6 +49,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
+    "twilio": "^5.5.2",
     "ws": "^8.18.1"
   },
   "devDependencies": {
