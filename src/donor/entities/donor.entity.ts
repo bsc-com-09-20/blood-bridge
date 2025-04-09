@@ -22,7 +22,7 @@ export class Donor {
   email: string;
 
   @Column({ length: 15 })
-  phone: string;
+  phoneNumber: string;
 
   @Column({ nullable: true, select: false })
   password?: string;

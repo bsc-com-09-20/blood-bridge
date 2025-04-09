@@ -1,5 +1,6 @@
 // src/auth/dto/login.dto.ts
-import { IsEmail, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, Matches  } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class LoginDto {
   @IsEmail()
@@ -8,11 +9,13 @@ export class LoginDto {
   @IsNotEmpty()
   password: string;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'Latitude is required for login' })
+  @Type(() => Number)
   @IsNumber()
   latitude?: number;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'Longitude is required for login' })
+  @Type(() => Number)
   @IsNumber()
   longitude?: number;
 }

@@ -1,18 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BloodRequest } from './entities/blood-request.entity';
 import { DonorService } from '../donor/donor.service';
 import { HospitalService } from '../hospital/hospital.service';
+import { NotificationService } from '../notification/notification.service';
 import { BloodType } from '../common/enums/blood-type.enum';
 
 @Injectable()
 export class BloodRequestService {
+  private logger = new Logger('BloodRequestService');
+
   constructor(
     @InjectRepository(BloodRequest)
     private readonly bloodRequestRepository: Repository<BloodRequest>,
     private readonly hospitalService: HospitalService,
-    private readonly donorService: DonorService, // Exact name match
+    private readonly donorService: DonorService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createRequest(
@@ -31,7 +35,10 @@ export class BloodRequestService {
       bloodType,
     );
 
-    if (!donors.length) return [];
+    if (!donors.length) {
+      this.logger.warn(`No donors found within ${radius}km for blood type ${bloodType}`);
+      return [];
+    }
 
     const requests = donors.map(donor => {
       const distance = this.calculateDistance(
@@ -47,11 +54,61 @@ export class BloodRequestService {
         bloodType,
         quantity,
         distanceKm: distance,
-        status: 'PENDING', // Recommended to add status
+        status: 'PENDING',
       });
     });
 
-    return this.bloodRequestRepository.save(requests);
+    const savedRequests = await this.bloodRequestRepository.save(requests);
+
+    // Send notifications to all eligible donors
+    try {
+      await this.notifyDonors(savedRequests, hospital.name, bloodType);
+    } catch (error) {
+      this.logger.error(`Failed to send notifications: ${error.message}`);
+      // We don't rethrow here to ensure the blood requests are still saved
+      // even if notifications fail
+    }
+
+    return savedRequests;
+  }
+
+  // New method to handle donor notifications
+  private async notifyDonors(
+    requests: BloodRequest[], 
+    hospitalName: string, 
+    bloodType: BloodType
+  ) {
+    const notificationPromises = requests.map(async (request) => {
+      try {
+        // Get donor's phone number
+        const donor = await this.donorService.findOne(request.donor.id);
+        if (!donor || !donor.phoneNumber) {
+          this.logger.warn(`Cannot notify donor #${request.donor.id}: no phone number found`);
+          return;
+        }
+
+        // Send blood request SMS notification
+        await this.notificationService.sendBloodRequestSms(
+          donor.phoneNumber,
+          hospitalName,
+          bloodType
+        );
+
+        // Update the request to indicate notification was sent
+        await this.bloodRequestRepository.update(request.id, {
+          notificationSent: true,
+          notificationSentAt: new Date()
+        });
+
+        this.logger.log(`Notification sent to donor #${donor.id} for blood type ${bloodType}`);
+      } catch (error) {
+        this.logger.error(`Failed to notify donor #${request.donor.id}: ${error.message}`);
+        // We don't rethrow to allow other notifications to proceed
+      }
+    });
+
+    // Wait for all notifications to be processed
+    await Promise.all(notificationPromises);
   }
 
   // Haversine formula to calculate distance between two GPS coordinates
