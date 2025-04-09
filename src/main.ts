@@ -1,10 +1,7 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-//import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -35,15 +32,18 @@ async function bootstrap() {
       whitelist: true,
       transform: true,
       forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true, // Helps with query/param conversion
+      },
     }),
   );
 
-  // Create the Swagger document
-  const document = SwaggerModule.createDocument(app, config);
+  
 
-  // Setup the Swagger UI endpoint (e.g., http://localhost:3000/api)
+  const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3004);
+  await app.listen(3007);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

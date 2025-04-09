@@ -1,19 +1,13 @@
-/*import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { BloodInventoryService } from './blood-inventory.service';
 import { CreateBloodInventoryDto } from './dto/create-blood-inventory.dto';
 import { UpdateBloodInventoryDto } from './dto/update-blood-inventory.dto';
+import { AuthGuard, Public } from 'src/auth/auth.guard';
 
 @ApiTags('blood-inventory')
 @Controller('blood-inventory')
+@Public()
 export class BloodInventoryController {
   constructor(private readonly bloodInventoryService: BloodInventoryService) {}
 
@@ -33,21 +27,21 @@ export class BloodInventoryController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a blood inventory entry by ID' })
   findOne(@Param('id') id: string) {
-    return this.bloodInventoryService.findOne(id); // ✅ Removed `+id`
+    return this.bloodInventoryService.findOne(Number(id)); // ✅ cast to number
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a blood inventory entry' })
-  update(
-    @Param('id') id: string,
-    @Body() updateBloodInventoryDto: UpdateBloodInventoryDto,
-  ) {
-    return this.bloodInventoryService.update(id, updateBloodInventoryDto); // ✅ Removed `+id`
+  update(@Param('id') id: string, @Body() updateBloodInventoryDto: UpdateBloodInventoryDto) {
+    return this.bloodInventoryService.update(Number(id), updateBloodInventoryDto); // ✅
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a blood inventory entry' })
   remove(@Param('id') id: string) {
-    return this.bloodInventoryService.remove(id); // ✅ Removed `+id`
+    return this.bloodInventoryService.remove(Number(id)); // ✅
   }
-}*/
+}
+
+
+
