@@ -27,14 +27,14 @@ export class Donor {
   @Column({ nullable: true, select: false })
   password?: string;
 
-  // Replace both location properties with this single definition
-  @Column({
-    type: 'geography',
-    spatialFeatureType: 'Point',
-    srid: 4326,
-    nullable: true
-  })
-  location?: Point;
+  @Column('float', { nullable: true })
+  latitude: number;
+
+  @Column('float', { nullable: true })
+  longitude: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastActive: Date;
 
   @CreateDateColumn()
   createdAt: Date;

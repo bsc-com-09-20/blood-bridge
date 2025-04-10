@@ -8,7 +8,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Strip unknown properties
-      forbidNonWhitelisted: false, // <-- allow extra props like 'role'
+      forbidNonWhitelisted: true, // <-- allow extra props like 'role'
       transform: true,
     }),
   );

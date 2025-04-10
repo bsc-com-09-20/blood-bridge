@@ -6,7 +6,6 @@ import { Donor } from './entities/donor.entity';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
-import { Point } from 'geojson';
 
 @Injectable()
 export class DonorService {
@@ -18,18 +17,9 @@ export class DonorService {
   async create(createDonorDto: CreateDonorDto): Promise<Donor> {
     const hashedPassword = await bcrypt.hash(createDonorDto.password, 10);
 
-    // Create GeoJSON Point object for PostGIS
-    const location = createDonorDto.latitude && createDonorDto.longitude
-      ? {
-          type: 'Point',
-          coordinates: [createDonorDto.longitude, createDonorDto.latitude] // PostGIS uses [lng, lat] order
-        } as Point
-      : undefined;
-
     const newDonor = this.donorRepository.create({
       ...createDonorDto,
       password: hashedPassword,
-      location,
       lastDonation: createDonorDto.lastDonation
         ? new Date(createDonorDto.lastDonation)
         : undefined,
@@ -69,22 +59,7 @@ export class DonorService {
       updateDonorDto.password = await bcrypt.hash(updateDonorDto.password, 10);
     }
 
-    // Handle location update
-    if (
-      updateDonorDto.latitude !== undefined &&
-      updateDonorDto.longitude !== undefined
-    ) {
-      donor.location = {
-        type: 'Point',
-        coordinates: [updateDonorDto.longitude, updateDonorDto.latitude]
-      } as Point;
-    }
-
-    // Remove latitude and longitude from the DTO before using Object.assign
-    // These properties likely don't exist on the Donor entity directly
-    const { latitude, longitude, ...updateData } = updateDonorDto;
-    
-    Object.assign(donor, updateData);
+    Object.assign(donor, updateDonorDto);
 
     return this.donorRepository.save(donor);
   }
@@ -92,65 +67,57 @@ export class DonorService {
   async remove(id: string): Promise<void> {
     await this.donorRepository.delete(id);
   }
-  
-  // ✅ Find nearby donors using PostGIS and return lat/lng extracted
-async findNearbyDonors(
-  latitude: number,
-  longitude: number,
-  radiusKm: number,
-  bloodType: string,
-): Promise<(Donor & { lat: number; lng: number })[]> {
-  const query = this.donorRepository
-    .createQueryBuilder('donor')
-    .addSelect(`ST_Y(donor.location)`, 'lat')
-    .addSelect(`ST_X(donor.location)`, 'lng')
-    .where(
-      `ST_DWithin(
-        donor.location,
-        ST_MakePoint(:lng, :lat)::geography,
-        :radius
-      )`,
-      {
-        lng: longitude,
-        lat: latitude,
-        radius: radiusKm * 1000,
-      },
-    );
 
-   // Only add the blood group filter if bloodType is provided
-   if (bloodType) {
-    query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup: bloodType });
+  // If you still want to find "nearby" donors based on raw lat/lng math (not using PostGIS)
+  async findNearbyDonors(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+    bloodType: string,
+  ): Promise<(Donor & { distanceKm: number })[]> {
+    const donors = await this.donorRepository.find();
+
+    const filtered = donors
+      .filter((donor) => {
+        if (!donor.latitude || !donor.longitude) return false;
+        if (bloodType && donor.bloodGroup !== bloodType) return false;
+
+        const distance = this.calculateDistanceKm(
+          latitude,
+          longitude,
+          donor.latitude,
+          donor.longitude,
+        );
+
+        return distance <= radiusKm;
+      })
+      .map((donor) => ({
+        ...donor,
+        distanceKm: this.calculateDistanceKm(
+          latitude,
+          longitude,
+          donor.latitude,
+          donor.longitude,
+        ),
+      }));
+
+    return filtered;
   }
 
-  const raw = await query.getRawAndEntities();
+  async getBloodGroupInsufficientDonors(bloodGroup: string) {
+    const threshold = 5;
 
-  // Map entities to include the extracted lat/lng values
-  return raw.entities.map((donor, i) => ({
-    ...donor,
-    lat: parseFloat(raw.raw[i].lat),
-    lng: parseFloat(raw.raw[i].lng),
-  }));
-}
+    const count = await this.donorRepository.count({
+      where: { bloodGroup },
+    });
 
+    return {
+      bloodGroup,
+      count,
+      isInsufficient: count < threshold,
+    };
+  }
 
-async getBloodGroupInsufficientDonors(bloodGroup: string) {
-  // Implementation depends on your business logic
-  // Example implementation:
-  const threshold = 5; // Define what "insufficient" means (e.g., less than 5 donors)
-  
-  const count = await this.donorRepository.count({
-    where: { bloodGroup }
-  });
-  
-  return {
-    bloodGroup,
-    count,
-    isInsufficient: count < threshold
-  };
-}
-  
-
-  // Compatibility function for blood groups
   private getCompatibleBloodGroups(bloodGroup: string): string[] {
     const compatibility = {
       'O-': ['O-'],
@@ -163,5 +130,31 @@ async getBloodGroupInsufficientDonors(bloodGroup: string) {
       'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
     };
     return compatibility[bloodGroup] || [];
+  }
+
+  private calculateDistanceKm(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const R = 6371; // Earth radius in km
+    const dLat = this.deg2rad(lat2 - lat1);
+    const dLon = this.deg2rad(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.deg2rad(lat1)) *
+        Math.cos(this.deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+
+  private deg2rad(deg: number): number {
+    return deg * (Math.PI / 180);
   }
 }

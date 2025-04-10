@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Point } from 'geojson';
 
 import { LoginDto } from './dto/login.dto';
 import { CreateDonorDto } from '../donor/dto/create-donor.dto';
@@ -28,131 +30,131 @@ export class AuthService {
     @InjectRepository(Hospital)
     private hospitalRepo: Repository<Hospital>,
   ) {}
+
   async login(loginDto: LoginDto) {
     const { email, password, latitude, longitude } = loginDto;
-    
-    // Try donor login
+
+    // Attempt Donor login
     const donor = await this.donorRepo.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'location', 'name', 'bloodGroup', 'phone', 'lastDonation'],
+      select: [
+        'id',
+        'email',
+        'password',
+        'latitude',
+        'longitude',
+        'name',
+        'bloodGroup',
+        'phone',
+        'lastDonation',
+      ],
     });
-    
+
     if (donor?.password) {
       const isMatch = await bcrypt.compare(password, donor.password);
-      
+
       if (!isMatch) {
         throw new UnauthorizedException('Invalid email or password');
       }
-      
-      // Update donor location on every login if coordinates are provided
+
       if (latitude && longitude) {
-        // Create GeoJSON Point
-        const point: Point = {
-          type: 'Point',
-          coordinates: [longitude, latitude] // GeoJSON uses [longitude, latitude] order
-        };
-        
-        donor.location = point;
+        donor.latitude = latitude;
+        donor.longitude = longitude;
+        donor.lastActive = new Date();
         await this.donorRepo.save(donor);
       }
-      
+
       const payload: AuthPayload = {
         id: donor.id,
         email: donor.email,
-        role: 'donor'
+        role: 'donor',
       };
-      
-      // Remove password from returned user object
+
       const { password: _, ...donorWithoutPassword } = donor;
-      
-      // In auth.service.ts login method
+
       return {
         token: this.jwtService.sign(payload),
-        userId: donor.id.toString(),  // or hospital.id.toString()
-        role: 'donor',  // or 'hospital'
-        name: donor.name  // or hospital.name
+        userId: donor.id.toString(),
+        role: 'donor',
+        name: donor.name,
       };
     }
-    
-    // Try hospital login
+
+    // Attempt Hospital login
     const hospital = await this.hospitalRepo.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'latitude', 'longitude', 'name'], // Update these fields based on your Hospital entity
+      select: [
+        'id',
+        'email',
+        'password',
+        'latitude',
+        'longitude',
+        'name',
+      ],
     });
-    
+
     if (hospital?.password) {
       const isMatch = await bcrypt.compare(password, hospital.password);
-      
+
       if (!isMatch) {
         throw new UnauthorizedException('Invalid email or password');
       }
-      
-      // Update hospital location - adapt this based on your Hospital entity
-      // If Hospital also uses GeoJSON, update similarly to donor above
-      if ((!hospital.latitude || !hospital.longitude) && latitude && longitude) {
+
+      if (latitude && longitude) {
         hospital.latitude = latitude;
         hospital.longitude = longitude;
+        hospital.lastActive = new Date();
         await this.hospitalRepo.save(hospital);
       }
-      
+
       const payload: AuthPayload = {
-        id: hospital.id.toString(),
+        id: hospital.id,
         email: hospital.email,
-        role: 'hospital'
+        role: 'hospital',
       };
-      
-      // Remove password from returned user object
+
       const { password: _, ...hospitalWithoutPassword } = hospital;
-      
-     // In auth.service.ts login method
+
       return {
         token: this.jwtService.sign(payload),
-        userId: hospital.id.toString(),  // or hospital.id.toString()
-        role: 'hospital',  // or 'hospital'
-        name: hospital.name  // or hospital.name
+        userId: hospital.id.toString(),
+        role: 'hospital',
+        name: hospital.name,
       };
     }
-    
+
     throw new UnauthorizedException('Invalid email or password');
   }
-  
+
   async registerDonor(dto: CreateDonorDto): Promise<LoginResponseDto> {
     const existingDonor = await this.donorRepo.findOne({
       where: { email: dto.email },
     });
-  
+
     if (existingDonor) {
       throw new UnauthorizedException('Email already registered');
     }
-  
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-  
-    let location: Point | undefined;
-    if (dto.latitude && dto.longitude) {
-      location = {
-        type: 'Point',
-        coordinates: [dto.longitude, dto.latitude],
-      };
-    }
-  
+
     const newDonor = this.donorRepo.create({
       name: dto.name,
       email: dto.email,
       phone: dto.phone,
       bloodGroup: dto.bloodGroup,
       password: hashedPassword,
-      location,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
     });
-  
+
     const savedDonor = await this.donorRepo.save(newDonor);
-  
-    // Create JWT payload
+
     const payload: AuthPayload = {
       id: savedDonor.id.toString(),
       email: savedDonor.email,
       role: 'donor',
     };
-  
+
     return {
       access_token: this.jwtService.sign(payload),
       user: {
@@ -162,10 +164,10 @@ export class AuthService {
         bloodGroup: savedDonor.bloodGroup,
         phone: savedDonor.phone,
         lastDonation: savedDonor.lastDonation,
-        location: savedDonor.location,
+        latitude: savedDonor.latitude,
+        longitude: savedDonor.longitude,
       },
       role: 'donor',
     };
   }
-  
 }
