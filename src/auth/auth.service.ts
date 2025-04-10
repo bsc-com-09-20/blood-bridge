@@ -77,7 +77,7 @@ export class AuthService {
     // Try hospital login
     const hospital = await this.hospitalRepo.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'latitude', 'longitude'], // Update these fields based on your Hospital entity
+      select: ['id', 'email', 'password', 'latitude', 'longitude', 'name'], // Update these fields based on your Hospital entity
     });
     
     if (hospital?.password) {

@@ -1,7 +1,7 @@
 // create-blood-type.dto.ts
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class CreateBloodTypeDto {
+export class CreateBloodGroupDto {
   @IsNotEmpty()
   @IsString()
   type: string;

@@ -1,7 +1,7 @@
 // update-blood-type.dto.ts
 import { IsOptional, IsString } from 'class-validator';
 
-export class UpdateBloodTypeDto {
+export class UpdateBloodGroupDto {
   @IsOptional()
   @IsString()
   type?: string;

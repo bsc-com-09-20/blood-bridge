@@ -1,37 +1,42 @@
-// blood-type.controller.ts
+// blood-group.controller.ts
 import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
-import { BloodTypeService } from './blood-type.service';
-import { CreateBloodTypeDto } from './dto/create-blood-type.dto';
-import { UpdateBloodTypeDto } from './dto/update-blood-type.dto';
 import { Public } from 'src/auth/auth.guard';
+import { BloodGroupService } from './blood-type.service';
+import { UpdateBloodGroupDto } from './dto/update-blood-group.dto';
+import { CreateBloodGroupDto } from './dto/create-blood_group.dto';
 
-@Controller('blood-types')
+@Controller('blood-groups')
 @Public()
-export class BloodTypeController {
-  constructor(private readonly bloodTypeService: BloodTypeService) {}
+export class BloodGroupController {
+  constructor(private readonly bloodGroupService: BloodGroupService) {}
 
   @Post()
-  create(@Body() dto: CreateBloodTypeDto) {
-    return this.bloodTypeService.create(dto);
+  create(@Body() dto: CreateBloodGroupDto) {
+    return this.bloodGroupService.create(dto);
   }
 
   @Get()
   findAll() {
-    return this.bloodTypeService.findAll();
+    return this.bloodGroupService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.bloodTypeService.findOne(id);
+    return this.bloodGroupService.findOne(id);
+  }
+
+  @Get('/by-group/:bloodGroup')
+  findByGroup(@Param('bloodGroup') bloodGroup: string) {
+    return this.bloodGroupService.findByGroup(bloodGroup);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateBloodTypeDto) {
-    return this.bloodTypeService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateBloodGroupDto) {
+    return this.bloodGroupService.update(id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.bloodTypeService.remove(id);
+    return this.bloodGroupService.remove(id);
   }
 }
