@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity('events') // Make sure table name is specified
+@Entity() // Make sure table name is specified
 export class Event {
   @PrimaryGeneratedColumn('uuid')
   id: string;
