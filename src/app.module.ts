@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,6 +17,7 @@ import { Hospital } from './hospital/entities/hospital.entity';
 import { AuthModule } from './auth/auth.module';
 import { BloodTypeModule } from './blood-type/blood-type/blood-type.module';
 import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
     NotificationModule,
     DonorModule,
     BloodTypeModule,
+    EventsModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],

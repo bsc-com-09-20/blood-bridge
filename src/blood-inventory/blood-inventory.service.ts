@@ -1,8 +1,7 @@
-// src/blood-inventory/blood-inventory.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BloodInventory } from './entities/blood-inventory.entity';
+import { BloodInventory, InventoryStatus } from './entities/blood-inventory.entity';
 import { CreateBloodInventoryDto } from './dto/create-blood-inventory.dto';
 import { UpdateBloodInventoryDto } from './dto/update-blood-inventory.dto';
 
@@ -13,10 +12,10 @@ export class BloodInventoryService {
     private bloodInventoryRepository: Repository<BloodInventory>,
   ) {}
 
-  private calculateStatus(units: number): string {
-    if (units > 5) return 'Sufficient';
-    if (units > 2) return 'Near Critical';
-    return 'Critical Shortage';
+  private calculateStatus(units: number): InventoryStatus {
+    if (units > 5) return InventoryStatus.SUFFICIENT;
+    if (units > 2) return InventoryStatus.NEAR_CRITICAL;
+    return InventoryStatus.CRITICAL_SHORTAGE;
   }
 
   async create(createDto: CreateBloodInventoryDto): Promise<BloodInventory> {
@@ -46,13 +45,10 @@ export class BloodInventoryService {
       throw new NotFoundException(`Blood inventory with ID ${id} not found`);
     }
 
-    const updatedUnits = updateDto.availableUnits ?? inventory.availableUnits;
-    const newStatus = this.calculateStatus(updatedUnits);
-
-    Object.assign(inventory, {
-      ...updateDto,
-      status: newStatus,
-    });
+    if (updateDto.availableUnits !== undefined) {
+      inventory.availableUnits = updateDto.availableUnits;
+      inventory.status = this.calculateStatus(updateDto.availableUnits);
+    }
 
     return await this.bloodInventoryRepository.save(inventory);
   }
