@@ -12,10 +12,10 @@ export class LoginDto {
   @IsNotEmpty({ message: 'Latitude is required for login' })
   @Type(() => Number)
   @IsNumber()
-  latitude?: number;
+  latitude: number;
 
   @IsNotEmpty({ message: 'Longitude is required for login' })
   @Type(() => Number)
   @IsNumber()
-  longitude?: number;
+  longitude: number;
 }

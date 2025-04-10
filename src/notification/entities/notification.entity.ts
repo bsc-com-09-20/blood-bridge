@@ -1,7 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { NotificationType, NotificationStatus } from '../dto/create-notification.dto';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 
-@Entity('notifications')
+@Entity()
 export class Notification {
   @PrimaryGeneratedColumn()
   id: number;
@@ -9,29 +8,21 @@ export class Notification {
   @Column()
   recipient: string;
 
-  @Column('text')
+  @Column()
   message: string;
 
-  @Column({
-    type: 'enum',
-    enum: NotificationType,
-    default: NotificationType.SMS
-  })
-  type: string;
+  @Column()
+  type: string; // e.g., 'SMS', 'EMAIL', 'PUSH'
 
-  @Column({
-    type: 'enum',
-    enum: NotificationStatus,
-    default: NotificationStatus.PENDING
-  })
-  status: string;
+  @Column()
+  status: string; // e.g., 'SENT', 'DELIVERED', 'FAILED'
 
   @Column({ nullable: true })
-  externalId?: string; // For IDs returned by external services like Twilio's SID
+  serviceResponse: string; // Response from notification service (e.g., Twilio SID)
 
   @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @Column({ nullable: true })
+  deliveredAt: Date;
 }

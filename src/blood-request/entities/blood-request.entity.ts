@@ -24,7 +24,8 @@ export class BloodRequest {
 
   @Column({
     type: 'enum',
-    enum: BloodType
+    enum: BloodType,
+    default: BloodType.ALL
   })
   bloodType: BloodType;
 
@@ -34,12 +35,16 @@ export class BloodRequest {
   @Column('float')
   distanceKm: number;
 
+  @Column('float')
+  radius: number;
+
   @Column({ type: 'timestamp', nullable: true })
   cancelledAt: Date | null;
 
   @Column({
-    default: 'pending',
-    enum: ['pending', 'accepted', 'rejected', 'fulfilled']
+    type: 'enum',
+    enum: ['PENDING', 'ACTIVE', 'FULFILLED', 'CANCELLED'],
+    default: 'PENDING'
   })
   status: string;
 
@@ -52,4 +57,6 @@ export class BloodRequest {
   @Column({ nullable: true })
   notificationSentAt: Date;
 
+  @Column({ default: 0 })
+  donorsNotified: number;
 }

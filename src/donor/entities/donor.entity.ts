@@ -28,14 +28,9 @@ export class Donor {
   password?: string;
 
   // Replace both location properties with this single definition
-  @Column({
-    type: 'geography',
-    spatialFeatureType: 'Point',
-    srid: 4326,
-    nullable: false
-  })
+  @Column({ type: 'json', nullable: true })
   location: Point;
-
+  
   @CreateDateColumn()
   createdAt: Date;
 
