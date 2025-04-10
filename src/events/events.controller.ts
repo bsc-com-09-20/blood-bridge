@@ -1,6 +1,5 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, 
   InternalServerErrorException, Logger, BadRequestException } from '@nestjs/common';
@@ -78,22 +77,4 @@ export class EventsController {
     return this.eventsService.remove(id);
   }
 
-  // Add a test endpoint to check database connection
-  @Get('test/connection')
-  async testConnection() {
-    try {
-      const event = await this.eventsService.testDatabaseConnection();
-      return {
-        status: 'success',
-        message: 'Database connection successful',
-        test_event: event
-      };
-    } catch (error) {
-      this.logger.error(`Database connection test failed: ${error.message}`, error.stack);
-      return {
-        status: 'error',
-        message: `Database connection failed: ${error.message}`
-      };
-    }
-  }
 }

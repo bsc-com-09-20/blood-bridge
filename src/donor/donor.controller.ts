@@ -4,12 +4,14 @@ import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
 import { Donor } from './entities/donor.entity';
-import { Roles } from 'src/auth/auth/roles.decorator';
-import { RolesGuard } from 'src/auth/auth/roles.guard';
-import { AuthGuard } from 'src/auth/auth/auth.guard';
-import { Role } from 'src/auth/auth/role.enum';
+import { Roles } from 'src/auth/roles.decorator';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { AuthGuard, Public } from 'src/auth/auth.guard';
+import { Role } from 'src/auth/role.enum';
+import { BloodType } from 'src/common/enums/blood-type.enum';
 
 @Controller('donors')
+@Public()
 export class DonorController {
   constructor(private readonly donorService: DonorService) {}
 
@@ -26,8 +28,6 @@ export class DonorController {
 
   // Get all donors with filter parameters
   @Get()
-  @UseGuards(AuthGuard, RolesGuard) // Protect route with both guards
-  @Roles(Role.DONOR) // Only users with 'donor' role can access t
   async findAll(@Query() filterDto: FilterDonorDto): Promise<Donor[]> {
     return this.donorService.findAll(filterDto);
   }
@@ -72,7 +72,8 @@ export class DonorController {
     @Query('radius') radius: number = 10,
     @Query('bloodGroup') bloodGroup?: string,
   ): Promise<Donor[]> {
-    return this.donorService.findNearbyDonors(latitude, longitude, radius, bloodGroup);
+    const bloodType = bloodGroup || '';
+    return this.donorService.findNearbyDonors(latitude, longitude, radius, bloodType);
   }
 
   // Check for insufficient donors of a specific blood group

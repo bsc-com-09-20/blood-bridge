@@ -1,7 +1,6 @@
 /* eslint-disable prettier/prettier */
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsDateString } from 'class-validator';
 
-
 export class CreateEventDto {
   @IsString()
   @IsNotEmpty()

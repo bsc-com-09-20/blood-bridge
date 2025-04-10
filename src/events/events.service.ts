@@ -1,5 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -33,6 +34,7 @@ export class EventsService {
 
   async create(createEventDto: CreateEventDto): Promise<Event> {
     this.logger.log(`Creating event with data: ${JSON.stringify(createEventDto)}`);
+    
     // Create a new event entity and map properties from DTO
     const newEvent = this.eventsRepository.create({
       title: createEventDto.title,

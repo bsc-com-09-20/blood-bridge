@@ -1,77 +1,67 @@
-/*import { Injectable } from '@nestjs/common';
+// src/blood-inventory/blood-inventory.service.ts
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { BloodInventory } from './entities/blood-inventory.entity';
 import { CreateBloodInventoryDto } from './dto/create-blood-inventory.dto';
 import { UpdateBloodInventoryDto } from './dto/update-blood-inventory.dto';
 
 @Injectable()
 export class BloodInventoryService {
+  constructor(
+    @InjectRepository(BloodInventory)
+    private bloodInventoryRepository: Repository<BloodInventory>,
+  ) {}
 
-  // Create a new blood inventory record
-  async create(createBloodInventoryDto: CreateBloodInventoryDto) {
-    const bloodInventoryRef = this.firebaseService.getFirestore().collection('blood_inventory');
-
-    // Generate a unique Firestore ID
-    const newDocRef = bloodInventoryRef.doc();
-    const id = newDocRef.id; // Firestore auto-generated string ID
-
-    // Add data to Firestore
-    const newInventory = {
-      id,
-      ...createBloodInventoryDto,
-    };
-
-    await newDocRef.set(newInventory);
-    return newInventory;
+  private calculateStatus(units: number): string {
+    if (units > 5) return 'Sufficient';
+    if (units > 2) return 'Near Critical';
+    return 'Critical Shortage';
   }
 
-  // Get all blood inventory records
-  async findAll() {
-    const snapshot = await this.firebaseService.getFirestore().collection('blood_inventory').get();
-
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return data ? { id: doc.id, ...data } : null;
-    }).filter(item => item !== null);
+  async create(createDto: CreateBloodInventoryDto): Promise<BloodInventory> {
+    const status = this.calculateStatus(createDto.availableUnits);
+    const inventory = this.bloodInventoryRepository.create({
+      ...createDto,
+      status,
+    });
+    return await this.bloodInventoryRepository.save(inventory);
   }
 
-  // Get a single blood inventory record by ID
-  async findOne(id: string) {
-    const docRef = this.firebaseService.getFirestore()
-      .collection('blood_inventory')
-      .doc(id)
-      .get();
-
-    if (!(await docRef).exists) return null;
-
-    return { id, ...(await docRef).data() };
+  async findAll(): Promise<BloodInventory[]> {
+    return await this.bloodInventoryRepository.find();
   }
 
-  // Update a blood inventory record by ID
-  async update(id: string, updateBloodInventoryDto: UpdateBloodInventoryDto) {
-   // const docRef = this.firebaseService.getFirestore()
-      .collection('blood_inventory')
-      .doc(id);
-
-    const doc = await docRef.get();
-    if (!doc.exists) throw new Error('Document not found');
-
-    // Apply the update
-    await docRef.update({ ...updateBloodInventoryDto });
-
-    // Get updated document
-    const updatedDoc = await docRef.get();
-    return { id, ...updatedDoc.data() };
+  async findOne(id: number): Promise<BloodInventory> {
+    const inventory = await this.bloodInventoryRepository.findOne({ where: { id } });
+    if (!inventory) {
+      throw new NotFoundException(`Blood inventory with ID ${id} not found`);
+    }
+    return inventory;
   }
 
-  // Delete a blood inventory record by ID
-  async remove(id: string) {
-    const docRef = this.firebaseService.getFirestore()
-      .collection('blood_inventory')
-      .doc(id);
+  async update(id: number, updateDto: UpdateBloodInventoryDto): Promise<BloodInventory> {
+    const inventory = await this.bloodInventoryRepository.findOne({ where: { id } });
+    if (!inventory) {
+      throw new NotFoundException(`Blood inventory with ID ${id} not found`);
+    }
 
-    const doc = await docRef.get();
-    if (!doc.exists) return null;
+    const updatedUnits = updateDto.availableUnits ?? inventory.availableUnits;
+    const newStatus = this.calculateStatus(updatedUnits);
 
-    await docRef.delete();
-    return { id, ...doc.data() };
+    Object.assign(inventory, {
+      ...updateDto,
+      status: newStatus,
+    });
+
+    return await this.bloodInventoryRepository.save(inventory);
   }
-} */
+
+  async remove(id: number): Promise<void> {
+    const inventory = await this.bloodInventoryRepository.findOne({ where: { id } });
+    if (!inventory) {
+      throw new NotFoundException(`Blood inventory with ID ${id} not found`);
+    }
+    await this.bloodInventoryRepository.remove(inventory);
+  }
+}

@@ -1,16 +1,15 @@
-/* eslint-disable prettier/prettier */
 import { Test, TestingModule } from '@nestjs/testing';
-import { EventsService } from './events.service';
+import { BloodGroupService } from './blood-type.service';
 
-describe('EventsService', () => {
-  let service: EventsService;
+describe('BloodTypeService', () => {
+  let service: BloodGroupService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EventsService],
+      providers: [BloodGroupService],
     }).compile();
 
-    service = module.get<EventsService>(EventsService);
+    service = module.get<BloodGroupService>(BloodGroupService);
   });
 
   it('should be defined', () => {
