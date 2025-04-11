@@ -75,8 +75,8 @@ export class BloodRequestService {
       const distance = this.calculateDistance(
         hospital.latitude,
         hospital.longitude,
-        donor.lat,
-        donor.lng,
+        donor.latitude,
+        donor.longitude,
       );
 
       const request = new BloodRequest();

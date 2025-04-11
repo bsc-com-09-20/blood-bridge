@@ -27,10 +27,22 @@ export class Donor {
   @Column({ nullable: true, select: false })
   password?: string;
 
+<<<<<<< HEAD
   // Replace both location properties with this single definition
   @Column({ type: 'json', nullable: true })
   location: Point;
   
+=======
+  @Column('float', { nullable: true })
+  latitude: number;
+
+  @Column('float', { nullable: true })
+  longitude: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastActive: Date;
+
+>>>>>>> 9b6cbd8b9d1c31720ea70fa77548e5dea7e2ec1f
   @CreateDateColumn()
   createdAt: Date;
 

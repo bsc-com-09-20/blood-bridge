@@ -27,4 +27,6 @@ longitude: number;
 
 
   // Add any other fields your Hospital entity might need
+  @Column({ type: 'timestamp', nullable: true })
+  lastActive: Date;
 }

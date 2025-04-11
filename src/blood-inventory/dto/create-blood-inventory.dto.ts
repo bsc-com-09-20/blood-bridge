@@ -1,12 +1,11 @@
-// src/blood-inventory/dto/create-blood-inventory.dto.ts
-import { IsNotEmpty, IsString, IsInt, Min } from 'class-validator';
+import { IsEnum, IsInt, IsPositive } from 'class-validator';
+import { BloodGroup } from '../entities/blood-inventory.entity';
 
 export class CreateBloodInventoryDto {
-  @IsString()
-  @IsNotEmpty()
-  bloodGroup: string;
+  @IsEnum(BloodGroup)
+  bloodGroup: BloodGroup;
 
   @IsInt()
-  @Min(0)
+  @IsPositive()
   availableUnits: number;
 }

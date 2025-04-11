@@ -51,4 +51,8 @@ export class UpdateDonorDto {
   @IsOptional()
   @IsNumber()
   longitude?: number;
+
+  @IsOptional()
+  @IsDate()
+  lastActive?: Date;
 }

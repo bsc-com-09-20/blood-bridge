@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -8,7 +9,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Strip unknown properties
-      forbidNonWhitelisted: false, // <-- allow extra props like 'role'
+      forbidNonWhitelisted: true, // <-- allow extra props like 'role'
       transform: true,
     }),
   );
@@ -44,5 +45,9 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   await app.listen(3004, '0.0.0.0');
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 9b6cbd8b9d1c31720ea70fa77548e5dea7e2ec1f
 }
 bootstrap();
