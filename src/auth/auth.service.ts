@@ -145,6 +145,7 @@ export class AuthService {
       password: hashedPassword,
       latitude: dto.latitude,
       longitude: dto.longitude,
+      donations: dto.donations || 0, 
     });
 
     const savedDonor = await this.donorRepo.save(newDonor);
