@@ -146,7 +146,9 @@ export class AuthService {
       phone: dto.phone,
       bloodGroup: dto.bloodGroup,
       password: hashedPassword,
-      location,
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      donations: dto.donations || 0, 
     });
 
     const savedDonor = await this.donorRepo.save(newDonor);

@@ -13,9 +13,11 @@ export class CreateEventDto {
   eventDate: Date;
 
   @IsString()
+  @IsOptional()
   startTime: string;
 
   @IsString()
+  @IsOptional()
   endTime: string;
 
   @IsString()
