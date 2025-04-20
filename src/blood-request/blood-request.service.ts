@@ -20,7 +20,7 @@ export class BloodRequestService {
   ) {}
 
   async createRequest(
-    hospitalId: number,
+    hospitalId:  string,
     bloodType: BloodType,
     quantity: number,
     radius: number,
@@ -110,9 +110,9 @@ export class BloodRequestService {
     await Promise.all(notificationPromises);
   }
 
-  async getRequestsByHospital(hospitalId: number) {
+  async getRequestsByHospital(hospitalId: string) {
     return this.bloodRequestRepository.find({
-      where: { hospital: { id: hospitalId.toString()} },
+      where: { hospital: { id: hospitalId} },
       relations: {
         donor: true,
         hospital: true,
@@ -121,7 +121,7 @@ export class BloodRequestService {
     });
   }
 
-  async findOne(id: number) {
+  async findOne(id:string ) {
     const request = await this.bloodRequestRepository.findOne({
       where: { id: id.toString()  },
       relations: {
@@ -137,7 +137,7 @@ export class BloodRequestService {
     return request;
   }
 
-  async cancelRequest(id: number) {
+  async cancelRequest(id: string) {
     const request = await this.findOne(id);
     
     await this.bloodRequestRepository.update(id, { 

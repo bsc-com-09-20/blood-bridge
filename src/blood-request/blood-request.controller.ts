@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { HospitalOnly } from '../auth/dto/roles/hospital-roles.decorator';
 import { BloodType } from '../common/enums/blood-type.enum';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Public } from 'src/auth/auth.guard';
 
 class CreateBloodRequestDto {
   bloodType: BloodType;
@@ -12,6 +13,7 @@ class CreateBloodRequestDto {
 }
 
 @Controller('blood-requests')
+@Public()
 export class BloodRequestController {
   constructor(private readonly service: BloodRequestService) {}
 
@@ -30,14 +32,15 @@ export class BloodRequestController {
 
   @Get('hospital/:hospitalId')
   @ApiOperation({ summary: 'Get all blood requests for a hospital' })
-  async getHospitalRequests(@Param('hospitalId') hospitalId: number) {
-    // Implement a method in your service to get requests by hospital
+  async getHospitalRequests(@Param('hospitalId') hospitalId: string) {
+    // Changed parameter type from number to string
     return this.service.getRequestsByHospital(hospitalId);
   }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific blood request' })
-  async getRequest(@Param('id') id: number) {
-    // Implement a method in your service to get a single request
+  async getRequest(@Param('id') id: string) {
+    // Changed parameter type from number to string
     return this.service.findOne(id);
   }
   
