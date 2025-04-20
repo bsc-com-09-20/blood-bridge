@@ -9,7 +9,7 @@ import { BloodType } from '../common/enums/blood-type.enum';
 
 @Injectable()
 export class BloodRequestService {
-  private logger = new Logger('BloodRequestService');
+  private readonly logger = new Logger(BloodRequestService.name);
 
   constructor(
     @InjectRepository(BloodRequest)
@@ -26,7 +26,9 @@ export class BloodRequestService {
     radius: number,
   ) {
     const hospital = await this.hospitalService.findOne(hospitalId);
-    if (!hospital) throw new NotFoundException('Hospital not found');
+    if (!hospital) {
+      throw new NotFoundException(`Hospital with ID ${hospitalId} not found`);
+    }
 
     const donors = await this.donorService.findNearbyDonors(
       hospital.latitude,
@@ -60,74 +62,127 @@ export class BloodRequestService {
 
     const savedRequests = await this.bloodRequestRepository.save(requests);
 
-    // Send notifications to all eligible donors
     try {
       await this.notifyDonors(savedRequests, hospital.name, bloodType);
     } catch (error) {
-      this.logger.error(`Failed to send notifications: ${error.message}`);
-      // We don't rethrow here to ensure the blood requests are still saved
-      // even if notifications fail
+      this.logger.error(
+        `Failed to send notifications for hospital ${hospitalId}: ${error.message}`,
+        error.stack,
+      );
     }
 
     return savedRequests;
   }
 
-  // New method to handle donor notifications
   private async notifyDonors(
     requests: BloodRequest[], 
     hospitalName: string, 
-    bloodType: BloodType
+    bloodType: BloodType,
   ) {
     const notificationPromises = requests.map(async (request) => {
       try {
-        // Get donor's phone number
         const donor = await this.donorService.findOne(request.donor.id);
-        if (!donor || !donor.phoneNumber) {
-          this.logger.warn(`Cannot notify donor #${request.donor.id}: no phone number found`);
+        if (!donor?.phone) {
+          this.logger.warn(`Skipping notification for donor ${request.donor.id}: no phone number`);
           return;
         }
 
-        // Send blood request SMS notification
         await this.notificationService.sendBloodRequestSms(
-          donor.phoneNumber,
+          donor.phone,
           hospitalName,
-          bloodType
+          bloodType,
         );
 
-        // Update the request to indicate notification was sent
         await this.bloodRequestRepository.update(request.id, {
           notificationSent: true,
-          notificationSentAt: new Date()
+          notificationSentAt: new Date(),
         });
 
-        this.logger.log(`Notification sent to donor #${donor.id} for blood type ${bloodType}`);
+        this.logger.log(`Notification sent to donor ${donor.id}`);
       } catch (error) {
-        this.logger.error(`Failed to notify donor #${request.donor.id}: ${error.message}`);
-        // We don't rethrow to allow other notifications to proceed
+        this.logger.error(
+          `Notification failed for donor ${request.donor.id}: ${error.message}`,
+          error.stack,
+        );
       }
     });
 
-    // Wait for all notifications to be processed
     await Promise.all(notificationPromises);
   }
 
-  // Haversine formula to calculate distance between two GPS coordinates
+  async getRequestsByHospital(hospitalId: number) {
+    return this.bloodRequestRepository.find({
+      where: { hospital: { id: hospitalId } },
+      relations: {
+        donor: true,
+        hospital: true,
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findOne(id: number) {
+    const request = await this.bloodRequestRepository.findOne({
+      where: { id: id.toString()  },
+      relations: {
+        donor: true,
+        hospital: true,
+      },
+    });
+    
+    if (!request) {
+      throw new NotFoundException(`Blood request with ID ${id} not found`);
+    }
+    
+    return request;
+  }
+
+  async cancelRequest(id: number) {
+    const request = await this.findOne(id);
+    
+    await this.bloodRequestRepository.update(id, { 
+      status: 'CANCELLED',
+      cancelledAt: new Date(),
+    });
+    
+    try {
+      const donor = await this.donorService.findOne(request.donor.id);
+      if (donor?.phone && request.hospital) {
+        await this.notificationService.sendSms(
+          donor.phone,
+          `The blood request from ${request.hospital.name} for ${request.bloodType} has been cancelled.`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Cancellation notification failed for request ${id}: ${error.message}`,
+        error.stack,
+      );
+    }
+    
+    return { success: true };
+  }
+
   private calculateDistance(
     lat1: number,
-    lng1: number,
+    lon1: number,
     lat2: number,
-    lng2: number,
+    lon2: number,
   ): number {
     const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const dLat = this.deg2rad(lat2 - lat1);
+    const dLon = this.deg2rad(lon2 - lon1);
+    
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
+      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Number((R * c).toFixed(2)); // Distance in km
+    return Number((R * c).toFixed(2));
+  }
+
+  private deg2rad(deg: number): number {
+    return deg * (Math.PI / 180);
   }
 }
