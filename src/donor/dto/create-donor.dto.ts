@@ -45,12 +45,14 @@ export class CreateDonorDto {
   @MinLength(6)
   password: string;
 
-  @IsOptional()
   @IsNumber()
+  @IsNotEmpty({ message: 'Latitude is required for login' })
+  @Type(() => Number)
   latitude?: number;
 
-  @IsOptional()
   @IsNumber()
+  @IsNotEmpty({ message: 'Latitude is required for login' })
+  @Type(() => Number)
   longitude?: number;
 
   @IsOptional()

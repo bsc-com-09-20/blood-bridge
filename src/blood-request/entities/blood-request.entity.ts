@@ -34,6 +34,9 @@ export class BloodRequest {
   @Column('float')
   distanceKm: number;
 
+  @Column({ type: 'timestamp', nullable: true })
+  cancelledAt: Date | null;
+
   @Column({
     default: 'pending',
     enum: ['pending', 'accepted', 'rejected', 'fulfilled']
@@ -42,4 +45,11 @@ export class BloodRequest {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({ default: false })
+  notificationSent: boolean;
+
+  @Column({ nullable: true })
+  notificationSentAt: Date;
+
 }
