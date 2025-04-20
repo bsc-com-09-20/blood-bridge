@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BloodType } from '../../common/enums/blood-type.enum';
+import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
 export class UpdateDonorDto {
   @IsOptional()
@@ -55,4 +56,8 @@ export class UpdateDonorDto {
   @IsOptional()
   @IsDate()
   lastActive?: Date;
+
+  @IsOptional()
+  @IsEnum(DonorStatus)
+  status?: DonorStatus;
 }

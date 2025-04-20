@@ -9,6 +9,7 @@ import { RolesGuard } from 'src/auth/roles.guard';
 import { AuthGuard, Public } from 'src/auth/auth.guard';
 import { Role } from 'src/auth/role.enum';
 import { BloodType } from 'src/common/enums/blood-type.enum';
+import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
 @Controller('donors')
 @Public()
@@ -81,4 +82,15 @@ export class DonorController {
   async getBloodGroupInsufficientDonors(@Query('bloodGroup') bloodGroup: string) {
     return this.donorService.getBloodGroupInsufficientDonors(bloodGroup);
   }
+
+  @Patch(':id/status')
+async updateStatus(
+  @Param('id') id: string, 
+  @Body('status') status: DonorStatus
+): Promise<Donor> {
+  if (!Object.values(DonorStatus).includes(status)) {
+    throw new BadRequestException(`Invalid status: ${status}`);
+  }
+  return this.donorService.updateStatus(id, status);
+}
 }
