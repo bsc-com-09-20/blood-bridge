@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BloodType } from '../../common/enums/blood-type.enum';
+import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
 export class CreateDonorDto {
   @IsNotEmpty()
@@ -53,4 +54,8 @@ export class CreateDonorDto {
   @IsNotEmpty({ message: 'Latitude is required for login' })
   @Type(() => Number)
   longitude?: number;
+
+  @IsOptional()
+  @IsEnum(DonorStatus)
+  status?: DonorStatus = DonorStatus.ACTIVE;
 }

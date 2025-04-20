@@ -7,6 +7,7 @@ import { Donor } from './entities/donor.entity';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
+import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
 @Injectable()
 export class DonorService {
@@ -37,8 +38,31 @@ export class DonorService {
         bloodGroup: filterDto.bloodGroup,
       });
     }
+    if (filterDto.status) {
+      query.andWhere('donor.status = :status', {
+        status: filterDto.status,
+      });
+    }
+    
+    if (filterDto.search) {
+      query.andWhere(
+        '(donor.name LIKE :search OR donor.email LIKE :search OR donor.bloodGroup LIKE :search)',
+        { search: `%${filterDto.search}%` },
+      );
+    }
 
     return await query.getMany();
+  }
+
+  async updateStatus(id: string, status: DonorStatus): Promise<Donor> {
+    const donor = await this.donorRepository.findOneBy({ id });
+  
+    if (!donor) {
+      throw new NotFoundException(`Donor with ID ${id} not found`);
+    }
+  
+    donor.status = status;
+    return this.donorRepository.save(donor);
   }
 
   async findOne(id: string): Promise<Donor | null> {
