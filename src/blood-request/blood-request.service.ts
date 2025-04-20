@@ -112,7 +112,7 @@ export class BloodRequestService {
 
   async getRequestsByHospital(hospitalId: number) {
     return this.bloodRequestRepository.find({
-      where: { hospital: { id: hospitalId } },
+      where: { hospital: { id: hospitalId.toString() } },
       relations: {
         donor: true,
         hospital: true,
