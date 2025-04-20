@@ -7,6 +7,7 @@ import { Donor } from './entities/donor.entity';
 import { CreateDonorDto } from './dto/create-donor.dto';
 import { UpdateDonorDto } from './dto/update-donor.dto';
 import { FilterDonorDto } from './dto/filter-donor.dto';
+import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
 @Injectable()
 export class DonorService {
@@ -37,8 +38,31 @@ export class DonorService {
         bloodGroup: filterDto.bloodGroup,
       });
     }
+    if (filterDto.status) {
+      query.andWhere('donor.status = :status', {
+        status: filterDto.status,
+      });
+    }
+    
+    if (filterDto.search) {
+      query.andWhere(
+        '(donor.name LIKE :search OR donor.email LIKE :search OR donor.bloodGroup LIKE :search)',
+        { search: `%${filterDto.search}%` },
+      );
+    }
 
     return await query.getMany();
+  }
+
+  async updateStatus(id: string, status: DonorStatus): Promise<Donor> {
+    const donor = await this.donorRepository.findOneBy({ id });
+  
+    if (!donor) {
+      throw new NotFoundException(`Donor with ID ${id} not found`);
+    }
+  
+    donor.status = status;
+    return this.donorRepository.save(donor);
   }
 
   async findOne(id: string): Promise<Donor | null> {
@@ -68,52 +92,12 @@ export class DonorService {
   async remove(id: string): Promise<void> {
     await this.donorRepository.delete(id);
   }
-<<<<<<< HEAD
-  
-=======
 
   // If you still want to find "nearby" donors based on raw lat/lng math (not using PostGIS)
->>>>>>> 9b6cbd8b9d1c31720ea70fa77548e5dea7e2ec1f
   async findNearbyDonors(
     latitude: number,
     longitude: number,
     radiusKm: number,
-<<<<<<< HEAD
-    bloodType?: string,  // optional filter for blood type
-  ): Promise<(Donor & { lat: number; lng: number })[]> {
-    const query = this.donorRepository
-      .createQueryBuilder('donor')
-      .addSelect(`ST_Y(donor.location)`, 'lat')
-      .addSelect(`ST_X(donor.location)`, 'lng')
-      .where(
-        `ST_DWithin(
-          donor.location,
-          ST_MakePoint(:lng, :lat)::geography,
-          :radius
-        )`,
-        {
-          lng: longitude,
-          lat: latitude,
-          radius: radiusKm * 1000,
-        },
-      );
-  
-    // Only add the blood group filter if bloodType is provided
-    if (bloodType) {
-      query.andWhere('donor.bloodGroup = :bloodGroup', { bloodGroup: bloodType });
-    }
-  
-    const raw = await query.getRawAndEntities();
-  
-    // Map entities to include the extracted lat/lng values
-    return raw.entities.map((donor, i) => ({
-      ...donor,
-      lat: parseFloat(raw.raw[i].lat),
-      lng: parseFloat(raw.raw[i].lng),
-    }));
-  }
-  
-=======
     bloodType: string,
   ): Promise<(Donor & { distanceKm: number })[]> {
     const donors = await this.donorRepository.find();
@@ -158,7 +142,6 @@ export class DonorService {
       isInsufficient: count < threshold,
     };
   }
->>>>>>> 9b6cbd8b9d1c31720ea70fa77548e5dea7e2ec1f
 
   private getCompatibleBloodGroups(bloodGroup: string): string[] {
     const compatibility = {

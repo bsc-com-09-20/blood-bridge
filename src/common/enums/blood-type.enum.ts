@@ -6,11 +6,5 @@ export enum BloodType {
     AB_POSITIVE = 'AB+',
     AB_NEGATIVE = 'AB-',
     O_POSITIVE = 'O+',
-    O_NEGATIVE = 'O-',
-    ALL = 'ALL'
+    O_NEGATIVE = 'O-'
   }
-  export function bloodTypeToString(bloodType: BloodType): string {
-    return bloodType === BloodType.ALL ? 'all blood types' : 
-      bloodType.toLowerCase().replace('_', '+');
-  }
-  

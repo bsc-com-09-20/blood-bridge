@@ -6,7 +6,6 @@ import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { Notification } from './entities/notification.entity';
 import * as twilio from 'twilio';
 import { ConfigService } from '@nestjs/config';
-import { BloodType } from '../common/enums/blood-type.enum';
 
 @Injectable()
 export class NotificationService {
@@ -40,8 +39,7 @@ export class NotificationService {
         recipient: phoneNumber,
         message: message,
         type: 'SMS',
-        status: 'SENT',
-        serviceResponse: result.sid
+        status: 'SENT'
       });
       
       return result;
@@ -53,60 +51,16 @@ export class NotificationService {
         recipient: phoneNumber,
         message: message,
         type: 'SMS',
-        status: 'FAILED',
-        serviceResponse: error.message
+        status: 'FAILED'
       });
       
       throw error;
     }
   }
 
-  async sendBloodRequestSms(
-    donorPhone: string, 
-    hospitalName: string, 
-    bloodType: BloodType, 
-    radius: number,
-    distance: number
-  ) {
-    const message = this.createBloodRequestMessage(
-      hospitalName,
-      bloodType,
-      radius,
-      distance
-    );
-    
+  async sendBloodRequestSms(donorPhone: string, hospitalName: string, bloodType: string) {
+    const message = `URGENT: ${hospitalName} needs blood type ${bloodType}. Please respond if you can donate. Thank you for saving lives!`;
     return this.sendSms(donorPhone, message);
-  }
-
-  private createBloodRequestMessage(
-    hospitalName: string,
-    bloodType: BloodType | 'ALL',
-    radius: number,
-    distance: number
-  ): string {
-    const distanceText = distance ? `(you're ${distance.toFixed(1)}km away)` : '';
-    
-    if (bloodType === 'ALL') {
-      return `URGENT: ${hospitalName} needs blood donors within ${radius}km ${distanceText}. ` +
-             `Please respond if available. Thank you for saving lives!`;
-    }
-    
-    return `URGENT: ${hospitalName} needs ${this.formatBloodType(bloodType)} blood donors ` +
-           `within ${radius}km ${distanceText}. Please respond if available. Thank you!`;
-  }
-
-  private formatBloodType(bloodType: BloodType): string {
-    const typeMap = {
-      'A_POSITIVE': 'A+',
-      'A_NEGATIVE': 'A-',
-      'B_POSITIVE': 'B+',
-      'B_NEGATIVE': 'B-',
-      'AB_POSITIVE': 'AB+',
-      'AB_NEGATIVE': 'AB-',
-      'O_POSITIVE': 'O+',
-      'O_NEGATIVE': 'O-',
-    };
-    return typeMap[bloodType] || bloodType;
   }
 
   // CRUD operations with database repository
@@ -150,12 +104,5 @@ export class NotificationService {
     }
     
     this.logger.log(`Removed notification with ID: ${id}`);
-  }
-
-  async getNotificationsByRecipient(phoneNumber: string): Promise<Notification[]> {
-    return this.notificationsRepository.find({
-      where: { recipient: phoneNumber },
-      order: { createdAt: 'DESC' }
-    });
   }
 }

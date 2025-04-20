@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Point } from 'geojson';
+import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
 @Entity()
 export class Donor {
@@ -27,12 +28,6 @@ export class Donor {
   @Column({ nullable: true, select: false })
   password?: string;
 
-<<<<<<< HEAD
-  // Replace both location properties with this single definition
-  @Column({ type: 'json', nullable: true })
-  location: Point;
-  
-=======
   @Column('float', { nullable: true })
   latitude: number;
 
@@ -42,7 +37,14 @@ export class Donor {
   @Column({ type: 'timestamp', nullable: true })
   lastActive: Date;
 
->>>>>>> 9b6cbd8b9d1c31720ea70fa77548e5dea7e2ec1f
+  // Add status column with default value
+  @Column({
+    type: 'enum',
+    enum: DonorStatus,
+    default: DonorStatus.ACTIVE
+  })
+  status: DonorStatus;
+
   @CreateDateColumn()
   createdAt: Date;
 

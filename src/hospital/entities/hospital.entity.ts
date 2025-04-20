@@ -3,7 +3,7 @@ import { Point } from 'geojson';
 
 @Entity()
 export class Hospital {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
@@ -16,15 +16,20 @@ export class Hospital {
   password: string;
 
   // Add location as GeoJSON Point
-  @Column({ type: 'json', nullable: true })
-  location: Point; // Hospital location as a GeoJSON Point
+  @Column({
+    type: 'geography',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true
+  })
+  location: Point;
+
+  // Keep these for backward compatibility or if needed elsewhere
+  @Column({ type: 'float', nullable: true })
+  latitude: number;
 
   @Column({ type: 'float', nullable: true })
- latitude: number;
-
-@Column({ type: 'float', nullable: true })
-longitude: number;
-
+  longitude: number;
 
   // Add any other fields your Hospital entity might need
   @Column({ type: 'timestamp', nullable: true })

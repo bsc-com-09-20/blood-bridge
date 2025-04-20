@@ -45,9 +45,5 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   await app.listen(3004, '0.0.0.0');
-<<<<<<< HEAD
-=======
-  
->>>>>>> 9b6cbd8b9d1c31720ea70fa77548e5dea7e2ec1f
 }
 bootstrap();

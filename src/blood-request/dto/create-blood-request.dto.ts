@@ -5,16 +5,12 @@ export class CreateBloodRequestDto {
   bloodType: BloodType;
   
   // Optional fields
-  hospitalId: string; // To link with hospital
+  hospitalId?: number; // To link with hospital
   donorId?: string;    // To link with donor (might be assigned later)
   status?: string;     // Default is 'pending' in entity
   distanceKm: number;
   broadcastAll?: boolean;  // This would be calculated based on donor and hospital distance
   
   // Add radius here to fix the error
-  radius: number;
-  
-  // Add quantity field
-  quantity: number;
-}    // Radius to search for compatible donors
-
+  radius: number;      // Radius to search for compatible donors
+}

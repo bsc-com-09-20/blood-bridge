@@ -1,9 +1,7 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { BloodRequest } from './entities/blood-request.entity';
-import { Donor } from '../donor/entities/donor.entity';
-import { Hospital } from '../hospital/entities/hospital.entity';
 import { DonorService } from '../donor/donor.service';
 import { HospitalService } from '../hospital/hospital.service';
 import { NotificationService } from '../notification/notification.service';
@@ -27,50 +25,23 @@ export class BloodRequestService {
     quantity: number,
     radius: number,
   ) {
-    return this.requestDonorsByDistance(
-      hospitalId,
-      bloodType,
-      radius,
-      false,
-      quantity
-    );
-  }
-
-  async requestDonorsByDistance(
-    hospitalId: number,
-    requestedBloodType: BloodType | null,
-    maxDistanceKm: number,
-    broadcastAll: boolean = false,
-    quantity: number = 1
-  ) {
     const hospital = await this.hospitalService.findOne(hospitalId);
     if (!hospital) {
       throw new NotFoundException(`Hospital with ID ${hospitalId} not found`);
     }
 
-    // Find nearby donors (with or without blood type filter)
-    let donors;
-    if (broadcastAll) {
-      donors = await this.donorService.findNearbyDonors(
-        hospital.latitude,
-        hospital.longitude,
-        maxDistanceKm,
-      );
-    } else {
-      donors = await this.donorService.findNearbyDonors(
-        hospital.latitude,
-        hospital.longitude,
-        maxDistanceKm,
-        requestedBloodType as BloodType,
-      );
-    }
+    const donors = await this.donorService.findNearbyDonors(
+      hospital.latitude,
+      hospital.longitude,
+      radius,
+      bloodType,
+    );
 
     if (!donors.length) {
-      this.logger.warn(`No donors found within ${maxDistanceKm}km`);
+      this.logger.warn(`No donors found within ${radius}km for blood type ${bloodType}`);
       return [];
     }
 
-    // Create request records
     const requests = donors.map(donor => {
       const distance = this.calculateDistance(
         hospital.latitude,
@@ -79,27 +50,20 @@ export class BloodRequestService {
         donor.longitude,
       );
 
-      const request = new BloodRequest();
-      request.hospital = { id: hospital.id } as Hospital;
-      request.donor = { id: donor.id } as Donor;
-      request.bloodType = broadcastAll ? BloodType.ALL : (requestedBloodType as BloodType);
-      request.quantity = quantity;
-      request.distanceKm = distance;
-      request.radius = maxDistanceKm;
-      request.status = 'PENDING';
-
-      return request;
+      return this.bloodRequestRepository.create({
+        hospital: { id: hospital.id },
+        donor: { id: donor.id },
+        bloodType,
+        quantity,
+        distanceKm: distance,
+        status: 'PENDING',
+      });
     });
 
     const savedRequests = await this.bloodRequestRepository.save(requests);
 
     try {
-      await this.notifyDonors(
-        savedRequests, 
-        hospital.name, 
-        broadcastAll ? BloodType.ALL : (requestedBloodType as BloodType),
-        maxDistanceKm
-      );
+      await this.notifyDonors(savedRequests, hospital.name, bloodType);
     } catch (error) {
       this.logger.error(
         `Failed to send notifications for hospital ${hospitalId}: ${error.message}`,
@@ -110,68 +74,10 @@ export class BloodRequestService {
     return savedRequests;
   }
 
-  async getRequestsByHospital(hospitalId: number) {
-    return this.bloodRequestRepository.find({
-      where: { hospitalId },
-      relations: ['donor', 'hospital'],
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async getRequestStatistics(hospitalId: number) {
-    const [totalRequests, pendingRequests, activeRequests, fulfilledRequests] = await Promise.all([
-      this.bloodRequestRepository.count({ where: { hospitalId } }),
-      this.bloodRequestRepository.count({ where: { hospitalId, status: 'PENDING' } }),
-      this.bloodRequestRepository.count({ where: { hospitalId, status: 'ACTIVE' } }),
-      this.bloodRequestRepository.count({ where: { hospitalId, status: 'FULFILLED' } }),
-    ]);
-
-    return {
-      totalRequests,
-      pendingRequests,
-      activeRequests,
-      fulfilledRequests,
-      cancelledRequests: totalRequests - pendingRequests - activeRequests - fulfilledRequests,
-    };
-  }
-
-  async cancelRequest(id: string) {
-    const request = await this.bloodRequestRepository.findOne({
-      where: { id },
-      relations: ['hospital', 'donor'],
-    });
-
-    if (!request) {
-      throw new NotFoundException(`Blood request with ID ${id} not found`);
-    }
-
-    await this.bloodRequestRepository.update(id, {
-      status: 'CANCELLED',
-      cancelledAt: new Date(),
-    });
-
-    try {
-      if (request.donor?.phone && request.hospital) {
-        await this.notificationService.sendSms(
-          request.donor.phone,
-          `The blood request from ${request.hospital.name} for ${this.bloodTypeToString(request.bloodType)} has been cancelled.`,
-        );
-      }
-    } catch (error) {
-      this.logger.error(
-        `Cancellation notification failed for request ${id}: ${error.message}`,
-        error.stack,
-      );
-    }
-
-    return { success: true };
-  }
-
   private async notifyDonors(
     requests: BloodRequest[], 
     hospitalName: string, 
     bloodType: BloodType,
-    radius: number
   ) {
     const notificationPromises = requests.map(async (request) => {
       try {
@@ -185,14 +91,11 @@ export class BloodRequestService {
           donor.phone,
           hospitalName,
           bloodType,
-          radius,
-          request.distanceKm
         );
 
         await this.bloodRequestRepository.update(request.id, {
           notificationSent: true,
           notificationSentAt: new Date(),
-          status: 'ACTIVE',
         });
 
         this.logger.log(`Notification sent to donor ${donor.id}`);
@@ -205,12 +108,59 @@ export class BloodRequestService {
     });
 
     await Promise.all(notificationPromises);
+  }
+
+  async getRequestsByHospital(hospitalId: number) {
+    return this.bloodRequestRepository.find({
+      where: { hospital: { id: hospitalId.toString()} },
+      relations: {
+        donor: true,
+        hospital: true,
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findOne(id: number) {
+    const request = await this.bloodRequestRepository.findOne({
+      where: { id: id.toString()  },
+      relations: {
+        donor: true,
+        hospital: true,
+      },
+    });
     
-    // Update donors notified count for all requests
-    await this.bloodRequestRepository.update(
-      { id: In(requests.map(r => r.id)) },
-      { donorsNotified: requests.length }
-    );
+    if (!request) {
+      throw new NotFoundException(`Blood request with ID ${id} not found`);
+    }
+    
+    return request;
+  }
+
+  async cancelRequest(id: number) {
+    const request = await this.findOne(id);
+    
+    await this.bloodRequestRepository.update(id, { 
+      status: 'CANCELLED',
+      cancelledAt: new Date(),
+    });
+    
+    try {
+      const donor = await this.donorService.findOne(request.donor.id);
+      if (donor?.phone && request.hospital) {
+        await this.notificationService.sendSms(
+          donor.phone,
+          `The blood request from ${request.hospital.name} for ${request.bloodType} has been cancelled.`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Cancellation notification failed for request ${id}: ${error.message}`,
+        error.stack,
+      );
+    }
+    
+    return { success: true };
   }
 
   private calculateDistance(
@@ -234,23 +184,5 @@ export class BloodRequestService {
 
   private deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
-  }
-
-  private bloodTypeToString(bloodType: BloodType): string {
-    return bloodType === BloodType.ALL ? 'all blood types' : 
-      bloodType.toLowerCase().replace('_', '+');
-  }
-
-  async findOne(id: string) {
-    const request = await this.bloodRequestRepository.findOne({
-      where: { id },
-      relations: ['donor', 'hospital'],
-    });
-    
-    if (!request) {
-      throw new NotFoundException(`Blood request with ID ${id} not found`);
-    }
-    
-    return request;
   }
 }

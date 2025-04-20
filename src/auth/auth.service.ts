@@ -1,12 +1,12 @@
 import {
   Injectable,
-  UnauthorizedException, BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Point } from 'geojson';
+
 import { LoginDto } from './dto/login.dto';
 import { CreateDonorDto } from '../donor/dto/create-donor.dto';
 import { Donor } from 'src/donor/entities/donor.entity';
@@ -21,9 +21,6 @@ interface AuthPayload {
 
 @Injectable()
 export class AuthService {
-  // In-memory token blacklist (for production, consider using Redis)
-  private tokenBlacklist: Set<string> = new Set();
-
   constructor(
     private jwtService: JwtService,
 
@@ -32,21 +29,25 @@ export class AuthService {
 
     @InjectRepository(Hospital)
     private hospitalRepo: Repository<Hospital>,
-    
   ) {}
 
   async login(loginDto: LoginDto) {
     const { email, password, latitude, longitude } = loginDto;
 
-    // Validate GPS for donors
-    if (latitude === undefined || longitude === undefined) {
-      throw new BadRequestException('GPS coordinates are required to login.');
-    }
-
-    // Try donor login
+    // Attempt Donor login
     const donor = await this.donorRepo.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'location', 'name', 'bloodGroup', 'phone', 'lastDonation'],
+      select: [
+        'id',
+        'email',
+        'password',
+        'latitude',
+        'longitude',
+        'name',
+        'bloodGroup',
+        'phone',
+        'lastDonation',
+      ],
     });
 
     if (donor?.password) {
@@ -56,13 +57,12 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      // Always update donor location
-      const point: Point = {
-        type: 'Point',
-        coordinates: [longitude, latitude],
-      };
-      donor.location = point;
-      await this.donorRepo.save(donor);
+      if (latitude && longitude) {
+        donor.latitude = latitude;
+        donor.longitude = longitude;
+        donor.lastActive = new Date();
+        await this.donorRepo.save(donor);
+      }
 
       const payload: AuthPayload = {
         id: donor.id,
@@ -80,10 +80,17 @@ export class AuthService {
       };
     }
 
-    // Try hospital login
+    // Attempt Hospital login
     const hospital = await this.hospitalRepo.findOne({
       where: { email },
-      select: ['id', 'email', 'password', 'latitude', 'longitude', 'name'],
+      select: [
+        'id',
+        'email',
+        'password',
+        'latitude',
+        'longitude',
+        'name',
+      ],
     });
 
     if (hospital?.password) {
@@ -93,15 +100,15 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      // Set location only on first login
-      if ((!hospital.latitude || !hospital.longitude) && latitude && longitude) {
+      if (latitude && longitude) {
         hospital.latitude = latitude;
         hospital.longitude = longitude;
+        hospital.lastActive = new Date();
         await this.hospitalRepo.save(hospital);
       }
 
       const payload: AuthPayload = {
-        id: hospital.id.toString(),
+        id: hospital.id,
         email: hospital.email,
         role: 'hospital',
       };
@@ -128,17 +135,7 @@ export class AuthService {
       throw new UnauthorizedException('Email already registered');
     }
 
-    // Validate GPS is provided
-    if (dto.latitude === undefined || dto.longitude === undefined) {
-      throw new BadRequestException('GPS coordinates are required for registration.');
-    }
-
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    const location: Point = {
-      type: 'Point',
-      coordinates: [dto.longitude, dto.latitude],
-    };
 
     const newDonor = this.donorRepo.create({
       name: dto.name,
@@ -168,7 +165,8 @@ export class AuthService {
         bloodGroup: savedDonor.bloodGroup,
         phone: savedDonor.phone,
         lastDonation: savedDonor.lastDonation,
-        location: savedDonor.location,
+        latitude: savedDonor.latitude,
+        longitude: savedDonor.longitude,
       },
       role: 'donor',
     };
