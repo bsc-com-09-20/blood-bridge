@@ -52,4 +52,7 @@ export class BloodRequest {
   @Column({ nullable: true })
   notificationSentAt: Date;
 
+  @Column({ nullable: true })
+  fulfilledAt: Date;
+
 }

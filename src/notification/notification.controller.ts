@@ -15,9 +15,11 @@ import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Public } from 'src/auth/auth.guard';
 
 @ApiTags('notifications')
 @Controller('notifications')
+@Public()
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 

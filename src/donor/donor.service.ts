@@ -1,4 +1,4 @@
-/* eslint-disable prettier/prettier */
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -93,7 +93,7 @@ export class DonorService {
     await this.donorRepository.delete(id);
   }
 
-  // If you still want to find "nearby" donors based on raw lat/lng math (not using PostGIS)
+  // Fixed to properly handle "ALL" blood type for broadcast requests
   async findNearbyDonors(
     latitude: number,
     longitude: number,
@@ -105,7 +105,9 @@ export class DonorService {
     const filtered = donors
       .filter((donor) => {
         if (!donor.latitude || !donor.longitude) return false;
-        if (bloodType && donor.bloodGroup !== bloodType) return false;
+        
+        // Skip blood type filtering if "ALL" is specified
+        if (bloodType !== 'ALL' && donor.bloodGroup !== bloodType) return false;
 
         const distance = this.calculateDistanceKm(
           latitude,
