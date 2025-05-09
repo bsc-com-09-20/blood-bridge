@@ -24,6 +24,6 @@ import { AuthGuard } from 'src/auth/auth.guard';
     },
     Reflector,
   ],
-  exports: [DonorService, TypeOrmModule], // Crucial: Export both the service and TypeOrmModule
+  exports: [DonorService, TypeOrmModule], // Export both the service and TypeOrmModule
 })
 export class DonorModule {}

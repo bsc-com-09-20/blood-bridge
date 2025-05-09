@@ -21,6 +21,9 @@ interface AuthPayload {
 
 @Injectable()
 export class AuthService {
+  verifyToken(token: string) {
+    throw new Error('Method not implemented.');
+  }
   constructor(
     private jwtService: JwtService,
 

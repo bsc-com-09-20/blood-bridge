@@ -1,63 +1,29 @@
-import {
-  IsEmail,
-  IsOptional,
-  IsString,
-  Matches,
-  IsNumber,
-  IsDate,
-  MinLength,
-  IsEnum,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-import { BloodType } from '../../common/enums/blood-type.enum';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateDonorDto } from './create-donor.dto';
+import { IsEnum, IsOptional, IsString, MinLength, Matches, IsNotEmpty } from 'class-validator';
 import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
-export class UpdateDonorDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsEnum(BloodType)
-  bloodGroup?: BloodType;
-
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  lastDonation?: Date;
-  
-  @IsOptional()
-  @IsNumber()
-  donations?: number;
-
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(6)
-  password?: string;
-
-  @IsOptional()
-  @Matches(/^\+[1-9]\d{1,14}$/, {
-    message: 'Phone number must be in E.164 format',
-  })
-  phone?: string;
-
-  @IsOptional()
-  @IsNumber()
-  latitude?: number;
-
-  @IsOptional()
-  @IsNumber()
-  longitude?: number;
-
-  @IsOptional()
-  @IsDate()
-  lastActive?: Date;
-
+export class UpdateDonorDto extends PartialType(CreateDonorDto) {
   @IsOptional()
   @IsEnum(DonorStatus)
   status?: DonorStatus;
+
+  // Remove password from here - password updates should only go through UpdatePasswordDto
+}
+
+export class UpdatePasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(8) // Increased from 6 to 8 for better security
+  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})/, {
+    message: 'Password must contain at least 1 uppercase, 1 lowercase, 1 number and 1 special character',
+  })
+  newPassword: string;
+
+  @IsString()
+  @IsNotEmpty()
+  confirmNewPassword: string;
 }

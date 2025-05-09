@@ -1,5 +1,4 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Point } from 'geojson';
 import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
 @Entity()
@@ -14,7 +13,7 @@ export class Donor {
   bloodGroup: string;
 
   @Column({ type: 'date', nullable: true })
-  lastDonation?: Date; // Now optional
+  lastDonation?: Date;
 
   @Column({ type: 'int', nullable: true, default: 0 })
   donations?: number;
@@ -37,13 +36,16 @@ export class Donor {
   @Column({ type: 'timestamp', nullable: true })
   lastActive: Date;
 
-  // Add status column with default value
   @Column({
     type: 'enum',
     enum: DonorStatus,
     default: DonorStatus.ACTIVE
   })
   status: DonorStatus;
+
+  // ✅ NEW: profile picture (stored as URL or file path)
+  @Column({ nullable: true })
+  profilePicture?: string;
 
   @CreateDateColumn()
   createdAt: Date;
