@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { Donor } from './entities/donor.entity';
@@ -57,32 +58,46 @@ export class DonorService {
     return this.donorRepository.save(donor);
   }
 
-  async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto): Promise<boolean> {
-    const donor = await this.findOne(id);
-    if (!donor || !donor.password) return false;  // Ensure password is not null or undefined
-
-    // Check if the current password is correct
-    const isMatch = await bcrypt.compare(updatePasswordDto.currentPassword, donor.password);
-    if (!isMatch) return false;
-
-    // Update the password if current password matches
-    const salt = await bcrypt.genSalt();
-    donor.password = await bcrypt.hash(updatePasswordDto.newPassword, salt);
-
-    await this.donorRepository.save(donor);
-    return true;
+  async remove(id: string): Promise<void> {
+    await this.donorRepository.delete(id);
   }
 
-  async remove(id: string): Promise<boolean> {
-    const result = await this.donorRepository.delete(id);
+  // Fixed to properly handle "ALL" blood type for broadcast requests
+  async findNearbyDonors(
+    latitude: number,
+    longitude: number,
+    radiusKm: number,
+    bloodType: string,
+  ): Promise<(Donor & { distanceKm: number })[]> {
+    const donors = await this.donorRepository.find();
 
-    // Ensure result is valid and contains affected property
-    return result && typeof result.affected === 'number' && result.affected > 0;
-  }
+    const filtered = donors
+      .filter((donor) => {
+        if (!donor.latitude || !donor.longitude) return false;
+        
+        // Skip blood type filtering if "ALL" is specified
+        if (bloodType !== 'ALL' && donor.bloodGroup !== bloodType) return false;
 
-  async findNearbyDonors(latitude: number, longitude: number, radius: number, bloodGroup: string): Promise<Donor[]> {
-    // Implement real geo logic here if needed
-    return [];
+        const distance = this.calculateDistanceKm(
+          latitude,
+          longitude,
+          donor.latitude,
+          donor.longitude,
+        );
+
+        return distance <= radiusKm;
+      })
+      .map((donor) => ({
+        ...donor,
+        distanceKm: this.calculateDistanceKm(
+          latitude,
+          longitude,
+          donor.latitude,
+          donor.longitude,
+        ),
+      }));
+
+    return filtered;
   }
 
   async getBloodGroupInsufficientDonors(bloodGroup: string): Promise<Donor[]> {

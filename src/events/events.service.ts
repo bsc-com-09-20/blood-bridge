@@ -29,48 +29,59 @@ export class EventsService {
     private donorRepository: Repository<Donor>,
   ) {}
 
-  async findAll(filterDto?: EventFilterDto): Promise<Event[]> {
-    const { search, isThisWeek, isWeekend, eventType, tags } = filterDto || {};
-    
-    // Build query
-    const queryBuilder = this.eventsRepository.createQueryBuilder('event');
-    
-    // Only show published events by default
-    queryBuilder.where('event.isPublished = :isPublished', { isPublished: true });
-    
-    // Apply filters if provided
-    if (search) {
-      queryBuilder.andWhere(
-        '(event.title ILIKE :search OR event.description ILIKE :search OR event.location ILIKE :search)',
-        { search: `%${search}%` }
-      );
-    }
-    
-    if (isThisWeek === 'true') {
-      queryBuilder.andWhere('event.isThisWeek = :isThisWeek', { isThisWeek: true });
-    }
-    
-    if (isWeekend === 'true') {
-      queryBuilder.andWhere('event.isWeekend = :isWeekend', { isWeekend: true });
-    }
-    
-    if (eventType) {
-      queryBuilder.andWhere('event.eventType = :eventType', { eventType });
-    }
-    
-    if (tags) {
-      const tagList = Array.isArray(tags) ? tags : [tags];
-      for (const tag of tagList) {
-        queryBuilder.andWhere(':tag = ANY(event.tags)', { tag });
-      }
-    }
-    
-    // Order by date
-    queryBuilder.orderBy('event.eventDate', 'ASC')
-      .addOrderBy('event.startTime', 'ASC');
-    
-    return queryBuilder.getMany();
+ async findAll(filterDto?: EventFilterDto): Promise<Event[]> {
+  const { search, isThisWeek, isWeekend, eventType, tags } = filterDto || {};
+  
+  // Build query
+  const queryBuilder = this.eventsRepository.createQueryBuilder('event');
+  
+  // Only show published events by default
+  queryBuilder.where('event.isPublished = :isPublished', { isPublished: true });
+  
+  // Important: Filter out past events by default (for "Upcoming" filter)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Start of today
+  
+  // Use CONCAT to compare date+time, or just filter by date if no specific filter is applied
+  if (!isThisWeek && !isWeekend) {
+    queryBuilder.andWhere('event.eventDate >= :today', { today });
   }
+  
+  // Apply filters if provided
+  if (search) {
+    queryBuilder.andWhere(
+      '(event.title ILIKE :search OR event.description ILIKE :search OR event.location ILIKE :search)',
+      { search: `%${search}%` }
+    );
+  }
+  
+  if (isThisWeek === 'true') {
+    queryBuilder.andWhere('event.isThisWeek = :isThisWeek', { isThisWeek: true });
+    queryBuilder.andWhere('event.eventDate >= :today', { today }); // Only future events for This Week
+  }
+  
+  if (isWeekend === 'true') {
+    queryBuilder.andWhere('event.isWeekend = :isWeekend', { isWeekend: true });
+    queryBuilder.andWhere('event.eventDate >= :today', { today }); // Only future events for Weekend
+  }
+  
+  if (eventType) {
+    queryBuilder.andWhere('event.eventType = :eventType', { eventType });
+  }
+  
+  if (tags) {
+    const tagList = Array.isArray(tags) ? tags : [tags];
+    for (const tag of tagList) {
+      queryBuilder.andWhere(':tag = ANY(event.tags)', { tag });
+    }
+  }
+  
+  // Order by date
+  queryBuilder.orderBy('event.eventDate', 'ASC')
+    .addOrderBy('event.startTime', 'ASC');
+  
+  return queryBuilder.getMany();
+}
 
   async findNearbyEvents(latitude: number, longitude: number, radius: number = 10): Promise<Event[]> {
     // This is a simplified implementation
@@ -91,51 +102,60 @@ export class EventsService {
   }
 
   async findThisWeekEvents(): Promise<Event[]> {
-    const today = new Date();
-    const nextWeek = new Date(today);
-    nextWeek.setDate(today.getDate() + 7);
-    
-    return this.eventsRepository.find({
-      where: {
-        isPublished: true,
-        eventDate: Between(today, nextWeek),
-      },
-      order: { eventDate: 'ASC', startTime: 'ASC' },
-    });
-  }
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(today.getDate() + 7);
+  
+  return this.eventsRepository.find({
+    where: {
+      isPublished: true,
+      eventDate: Between(today, nextWeek), // This ensures only future events
+    },
+    order: { eventDate: 'ASC', startTime: 'ASC' },
+  });
+}
 
-  async findWeekendEvents(): Promise<Event[]> {
-    // Get current date info
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 is Sunday, 6 is Saturday
-    
-    // Calculate upcoming weekend dates
-    const nextSaturday = new Date(today);
-    const nextSunday = new Date(today);
-    
-    if (dayOfWeek === 6) { // If today is Saturday
-      nextSaturday.setDate(today.getDate());
-      nextSunday.setDate(today.getDate() + 1);
-    } else if (dayOfWeek === 0) { // If today is Sunday
-      nextSaturday.setDate(today.getDate() - 1);
-      nextSunday.setDate(today.getDate());
-    } else { // If weekday
-      nextSaturday.setDate(today.getDate() + (6 - dayOfWeek));
-      nextSunday.setDate(today.getDate() + (7 - dayOfWeek));
-    }
-    
-    // Set time to start/end of day
-    nextSaturday.setHours(0, 0, 0, 0);
-    nextSunday.setHours(23, 59, 59, 999);
-    
-    return this.eventsRepository.find({
-      where: [
-        { isPublished: true, eventDate: Between(nextSaturday, nextSunday) },
-        { isPublished: true, isWeekend: true, eventDate: MoreThanOrEqual(today) },
-      ],
-      order: { eventDate: 'ASC', startTime: 'ASC' },
-    });
+async findWeekendEvents(): Promise<Event[]> {
+  // Get current date info
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 is Sunday, 6 is Saturday
+  
+  // Calculate upcoming weekend dates
+  const nextSaturday = new Date(today);
+  const nextSunday = new Date(today);
+  
+  if (dayOfWeek === 6) { // If today is Saturday
+    nextSaturday.setDate(today.getDate());
+    nextSunday.setDate(today.getDate() + 1);
+  } else if (dayOfWeek === 0) { // If today is Sunday
+    nextSaturday.setDate(today.getDate() - 1);
+    nextSunday.setDate(today.getDate());
+  } else { // If weekday
+    nextSaturday.setDate(today.getDate() + (6 - dayOfWeek));
+    nextSunday.setDate(today.getDate() + (7 - dayOfWeek));
   }
+  
+  // Set time to start/end of day
+  nextSaturday.setHours(0, 0, 0, 0);
+  nextSunday.setHours(23, 59, 59, 999);
+  
+  return this.eventsRepository.find({
+    where: [
+      { 
+        isPublished: true, 
+        eventDate: Between(nextSaturday, nextSunday),
+        // This is already filtered for the upcoming weekend
+      },
+      { 
+        isPublished: true, 
+        isWeekend: true, 
+        eventDate: MoreThanOrEqual(today), // This ensures only future weekend events
+      },
+    ],
+    order: { eventDate: 'ASC', startTime: 'ASC' },
+  });
+}
+
 
   async findOne(id: string): Promise<Event> {
     const event = await this.eventsRepository.findOne({ where: { id } });
