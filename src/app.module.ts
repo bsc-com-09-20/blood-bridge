@@ -7,7 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HospitalModule } from './hospital/hospital.module';
 import { BloodRequestModule } from './blood-request/blood-request.module';
-import { SettingsModule } from './settings/settings.module';
+//import { SettingsModule } from './settings/settings.module';
 import { NotificationModule } from './notification/notification.module';
 import { DonorModule } from './donor/donor.module';
 import { Donor } from './donor/entities/donor.entity';
@@ -47,7 +47,6 @@ import { DonationSchedulingModule } from './donation-scheduling/donation-schedul
     AuthModule,
     HospitalModule,
     BloodRequestModule,
-    SettingsModule,
     NotificationModule,
     DonorModule,
     BloodTypeModule,

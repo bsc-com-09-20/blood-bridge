@@ -1,33 +1,23 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+// src/settings/entities/setting.entity.ts
+/*import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
 export class Setting {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  donorId: number;
+  @Column({ nullable: true }) // 👈 Updated here to allow null values
+  donorId: string;
 
-  @Column({ default: true })
-  notificationEnabled: boolean;
+  @Column('jsonb', { default: {} })
+  preferences: Record<string, any>;
 
-  @Column({ default: 'weekly' })
-  emailFrequency: string;
+  @Column('jsonb', { default: {} })
+  notifications: Record<string, any>;
 
-  @Column({ default: 'private' })
-  privacyLevel: string;
+  @CreateDateColumn()
+  createdAt: Date;
 
-  @Column({ default: 'light' })
-  theme: string;
-
-  @Column({ default: 'en' })
-  language: string;
-  
-  // Keep these if you still need them for authentication
-  // Otherwise they can be removed
-  @Column({ nullable: true })
-  email: string;
-  
-  @Column({ nullable: true })
-  password: string;
-}
+  @UpdateDateColumn()
+  updatedAt: Date;
+} */

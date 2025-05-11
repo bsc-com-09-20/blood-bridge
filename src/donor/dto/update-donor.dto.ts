@@ -1,29 +1,51 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateDonorDto } from './create-donor.dto';
-import { IsEnum, IsOptional, IsString, MinLength, Matches, IsNotEmpty } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsEnum, MinLength, IsISO8601, IsNumber } from 'class-validator';
 import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
-export class UpdateDonorDto extends PartialType(CreateDonorDto) {
+export class UpdateDonorDto {
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(6)
+  password?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  bloodGroup?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  lastDonation?: string;
+
+  @IsOptional()
+  @IsNumber()
+  donations?: number;
+
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
+
   @IsOptional()
   @IsEnum(DonorStatus)
   status?: DonorStatus;
-
-  // Remove password from here - password updates should only go through UpdatePasswordDto
 }
 
+// Updated UpdatePasswordDto
 export class UpdatePasswordDto {
-  @IsString()
-  @IsNotEmpty()
-  currentPassword: string;
-
-  @IsString()
-  @MinLength(8) // Increased from 6 to 8 for better security
-  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9])(?=.{8,})/, {
-    message: 'Password must contain at least 1 uppercase, 1 lowercase, 1 number and 1 special character',
-  })
+  // Remove currentPassword requirement
   newPassword: string;
-
-  @IsString()
-  @IsNotEmpty()
-  confirmNewPassword: string;
 }

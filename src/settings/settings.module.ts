@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+/*import { Module } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { SettingsController } from './settings.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -9,4 +9,4 @@ import { Setting } from './entities/setting.entity';
   controllers: [SettingsController],
   providers: [SettingsService],
 })
-export class SettingsModule {}
+export class SettingsModule {}*/
