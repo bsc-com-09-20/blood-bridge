@@ -7,7 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HospitalModule } from './hospital/hospital.module';
 import { BloodRequestModule } from './blood-request/blood-request.module';
-import { SettingsModule } from './settings/settings.module';
+//import { SettingsModule } from './settings/settings.module';
 import { NotificationModule } from './notification/notification.module';
 import { DonorModule } from './donor/donor.module';
 import { Donor } from './donor/entities/donor.entity';
@@ -19,6 +19,8 @@ import { BloodTypeModule } from './blood-type/blood-type/blood-type.module';
 import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
 import { EventsModule } from './events/events.module';
 import { Event } from './events/entities/event.entity';
+import { scheduled } from 'rxjs';
+import { DonationSchedulingModule } from './donation-scheduling/donation-scheduling/donation-scheduling.module';
 
 @Module({
   imports: [
@@ -45,11 +47,11 @@ import { Event } from './events/entities/event.entity';
     AuthModule,
     HospitalModule,
     BloodRequestModule,
-    SettingsModule,
     NotificationModule,
     DonorModule,
     BloodTypeModule,
     EventsModule,
+    DonationSchedulingModule,
 
   ],
   controllers: [AppController],

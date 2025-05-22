@@ -1,99 +1,110 @@
-
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { Repository, ILike } from 'typeorm';
 import { Donor } from './entities/donor.entity';
 import { CreateDonorDto } from './dto/create-donor.dto';
-import { UpdateDonorDto } from './dto/update-donor.dto';
+import { UpdateDonorDto, UpdatePasswordDto } from './dto/update-donor.dto';
+import * as bcrypt from 'bcrypt';
 import { FilterDonorDto } from './dto/filter-donor.dto';
 import { DonorStatus } from 'src/common/enums/donor-status.enum';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Injectable()
 export class DonorService {
   constructor(
     @InjectRepository(Donor)
-    private readonly donorRepository: Repository<Donor>,
+    private donorRepository: Repository<Donor>,
   ) {}
 
   async create(createDonorDto: CreateDonorDto): Promise<Donor> {
-    const hashedPassword = await bcrypt.hash(createDonorDto.password, 10);
-
-    const newDonor = this.donorRepository.create({
-      ...createDonorDto,
-      password: hashedPassword,
-      lastDonation: createDonorDto.lastDonation
-        ? new Date(createDonorDto.lastDonation)
-        : undefined,
-    });
-
-    return await this.donorRepository.save(newDonor);
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(createDonorDto.password, salt);
+    const donor = this.donorRepository.create({ ...createDonorDto, password: hashedPassword });
+    return this.donorRepository.save(donor);
   }
 
   async findAll(filterDto: FilterDonorDto): Promise<Donor[]> {
-    const query = this.donorRepository.createQueryBuilder('donor');
+    const { bloodGroup, status, name } = filterDto;
+    const where: any = {};
 
-    if (filterDto.bloodGroup) {
-      query.andWhere('donor.bloodGroup = :bloodGroup', {
-        bloodGroup: filterDto.bloodGroup,
-      });
-    }
-    if (filterDto.status) {
-      query.andWhere('donor.status = :status', {
-        status: filterDto.status,
-      });
-    }
-    
-    if (filterDto.search) {
-      query.andWhere(
-        '(donor.name LIKE :search OR donor.email LIKE :search OR donor.bloodGroup LIKE :search)',
-        { search: `%${filterDto.search}%` },
-      );
-    }
+    if (bloodGroup) where.bloodGroup = bloodGroup;
+    if (status) where.status = status;
+    if (name) where.name = ILike(`%${name}%`);
 
-    return await query.getMany();
-  }
-
-  async updateStatus(id: string, status: DonorStatus): Promise<Donor> {
-    const donor = await this.donorRepository.findOneBy({ id });
-  
-    if (!donor) {
-      throw new NotFoundException(`Donor with ID ${id} not found`);
-    }
-  
-    donor.status = status;
-    return this.donorRepository.save(donor);
+    return this.donorRepository.find({ where });
   }
 
   async findOne(id: string): Promise<Donor | null> {
-    return await this.donorRepository.findOneBy({ id });
+    const donor = await this.donorRepository.findOne({ where: { id } });
+    return donor ?? null;
   }
 
   async findByEmail(email: string): Promise<Donor | null> {
-    return await this.donorRepository.findOneBy({ email });
+    const donor = await this.donorRepository.findOne({ where: { email } });
+    return donor ?? null;
   }
 
-  async update(id: string, updateDonorDto: UpdateDonorDto): Promise<Donor> {
-    const donor = await this.donorRepository.findOneBy({ id });
+  async update(id: string, updateDonor: UpdateDonorDto): Promise<Donor | null> {
+    const donor = await this.findOne(id);
+    if (!donor) return null;
 
-    if (!donor) {
-      throw new NotFoundException(`Donor with ID ${id} not found`);
+    // Check if the password exists and update it if provided
+    if (updateDonor.password) {
+      const salt = await bcrypt.genSalt();
+      updateDonor.password = await bcrypt.hash(updateDonor.password, salt);
     }
 
-    if (updateDonorDto.password) {
-      updateDonorDto.password = await bcrypt.hash(updateDonorDto.password, 10);
-    }
-
-    Object.assign(donor, updateDonorDto);
-
+    Object.assign(donor, updateDonor);
     return this.donorRepository.save(donor);
   }
 
-  async remove(id: string): Promise<void> {
+  // Update the DonorService method
+async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto): Promise<boolean> {
+  const donor = await this.findOne(id);
+  if (!donor) return false;
+  
+  // No longer verifying the old password
+  
+  const salt = await bcrypt.genSalt();
+  const hashedPassword = await bcrypt.hash(updatePasswordDto.newPassword, salt);
+  
+  donor.password = hashedPassword;
+  await this.donorRepository.save(donor);
+  return true;
+}
+
+  async remove(id: string): Promise<boolean> {
+    const donor = await this.findOne(id);
+    if (!donor) return false;
+    
     await this.donorRepository.delete(id);
+    return true;
   }
 
-  // Fixed to properly handle "ALL" blood type for broadcast requests
+  // New method for account deletion with password verification
+  async deleteAccount(id: string, deleteAccountDto: DeleteAccountDto): Promise<boolean> {
+    const donor = await this.findOne(id);
+    if (!donor) {
+      throw new NotFoundException('Donor not found');
+    }
+    
+    // Check if password exists
+    if (!donor.password) {
+      throw new UnauthorizedException('Password verification failed');
+    }
+    
+    // Verify password before proceeding with deletion
+    const isPasswordValid = await bcrypt.compare(deleteAccountDto.password, donor.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid password');
+    }
+    
+    // Proceed with account deletion
+    const result = await this.donorRepository.delete(id);
+    return result.affected !== null && result.affected !== undefined && result.affected > 0;
+  }
+
+  // Existing methods...
   async findNearbyDonors(
     latitude: number,
     longitude: number,
@@ -131,57 +142,39 @@ export class DonorService {
     return filtered;
   }
 
-  async getBloodGroupInsufficientDonors(bloodGroup: string) {
-    const threshold = 5;
-
-    const count = await this.donorRepository.count({
-      where: { bloodGroup },
-    });
-
-    return {
-      bloodGroup,
-      count,
-      isInsufficient: count < threshold,
-    };
-  }
-
-  private getCompatibleBloodGroups(bloodGroup: string): string[] {
-    const compatibility = {
-      'O-': ['O-'],
-      'O+': ['O-', 'O+'],
-      'A-': ['O-', 'A-'],
-      'A+': ['O-', 'O+', 'A-', 'A+'],
-      'B-': ['O-', 'B-'],
-      'B+': ['O-', 'O+', 'B-', 'B+'],
-      'AB-': ['O-', 'A-', 'B-', 'AB-'],
-      'AB+': ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'],
-    };
-    return compatibility[bloodGroup] || [];
-  }
-
-  private calculateDistanceKm(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
-  ): number {
-    const R = 6371; // Earth radius in km
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-
+  calculateDistanceKm(latitude: number, longitude: number, latitude1: number, longitude1: number): number {
+    // Implementation for the Haversine formula to calculate distance between two points
+    const R = 6371; // Radius of the earth in km
+    const dLat = this.deg2rad(latitude1 - latitude);
+    const dLon = this.deg2rad(longitude1 - longitude);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) *
-        Math.cos(this.deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-
+      Math.cos(this.deg2rad(latitude)) * Math.cos(this.deg2rad(latitude1)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
+    const distance = R * c; // Distance in km
+    return distance;
   }
 
+  // Helper function for the Haversine formula
   private deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
+  }
+
+  async getBloodGroupInsufficientDonors(bloodGroup: string): Promise<Donor[]> {
+    return this.donorRepository.find({
+      where: {
+        bloodGroup,
+        status: DonorStatus.ACTIVE,
+      },
+    });
+  }
+
+  async updateStatus(id: string, status: DonorStatus): Promise<Donor | null> {
+    const donor = await this.findOne(id);
+    if (!donor) return null;
+
+    donor.status = status;
+    return this.donorRepository.save(donor);
   }
 }

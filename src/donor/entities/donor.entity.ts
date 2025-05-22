@@ -14,7 +14,7 @@ export class Donor {
   bloodGroup: string;
 
   @Column({ type: 'date', nullable: true })
-  lastDonation?: Date; // Now optional
+  lastDonation?: Date;
 
   @Column({ type: 'int', nullable: true, default: 0 })
   donations?: number;
