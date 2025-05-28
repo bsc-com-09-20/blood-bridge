@@ -1,3 +1,4 @@
+// blood-request.service.ts (Fixed)
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -50,16 +51,13 @@ export class BloodRequestService {
         donor.longitude,
       );
 
-      // Use the donor's actual blood type instead of "ALL"
-      // Cast to BloodType enum to ensure type safety
       const requestBloodType = bloodType === 'ALL' 
         ? (donor.bloodGroup as BloodType) 
         : bloodType as BloodType;
 
-      // Use proper relations syntax for TypeORM
       return this.bloodRequestRepository.create({
-        hospital: { id: hospital.id },
-        donor: { id: donor.id },
+        hospitalId: hospital.id,
+        donorId: String(donor.id), // Convert to string
         bloodType: requestBloodType,
         quantity,
         distanceKm: distance,
@@ -70,10 +68,9 @@ export class BloodRequestService {
     const savedRequests = await this.bloodRequestRepository.save(requests);
 
     try {
-      // For broadcast requests, we need to handle notifications with each donor's blood type
       if (bloodType === 'ALL') {
         for (const request of savedRequests) {
-          const donor = await this.donorService.findOne(request.donor.id);
+          const donor = await this.donorService.findOne(request.donorId);
           if (donor?.bloodGroup) {
             await this.notifyDonor(
               request, 
@@ -101,9 +98,9 @@ export class BloodRequestService {
     bloodType: BloodType,
   ) {
     try {
-      const donor = await this.donorService.findOne(request.donor.id);
+      const donor = await this.donorService.findOne(request.donorId);
       if (!donor?.phone) {
-        this.logger.warn(`Skipping notification for donor ${request.donor.id}: no phone number`);
+        this.logger.warn(`Skipping notification for donor ${request.donorId}: no phone number`);
         return;
       }
 
@@ -122,7 +119,7 @@ export class BloodRequestService {
       this.logger.log(`Notification sent to donor ${donor.id}`);
     } catch (error) {
       this.logger.error(
-        `Notification failed for donor ${request.donor.id}: ${error.message}`,
+        `Notification failed for donor ${request.donorId}: ${error.message}`,
         error.stack,
       );
     }
@@ -142,7 +139,7 @@ export class BloodRequestService {
 
   async getRequestsByHospital(hospitalId: string) {
     return this.bloodRequestRepository.find({
-      where: { hospital: { id: hospitalId} },
+      where: { hospitalId },
       relations: {
         donor: true,
         hospital: true,
@@ -151,7 +148,7 @@ export class BloodRequestService {
     });
   }
 
-  async findOne(id:string ) {
+  async findOne(id: string) {
     const request = await this.bloodRequestRepository.findOne({
       where: { id },
       relations: {
@@ -176,7 +173,7 @@ export class BloodRequestService {
     });
     
     try {
-      const donor = await this.donorService.findOne(request.donor.id);
+      const donor = await this.donorService.findOne(request.donorId);
       if (donor?.phone && request.hospital) {
         await this.notificationService.sendSms(
           donor.phone,
@@ -193,39 +190,40 @@ export class BloodRequestService {
     return { success: true };
   }
 
-  async respondToRequest(id: string) {
+  async respondToRequest(id: string, donorId: string) {
     const request = await this.findOne(id);
+    
+    if (request.donorId !== donorId) {
+      throw new NotFoundException('Blood request not found or not assigned to you');
+    }
     
     if (request.status !== 'ACTIVE' && request.status !== 'PENDING') {
       throw new Error(`Cannot respond to request with status: ${request.status}`);
     }
     
-    // Update the request status
     await this.bloodRequestRepository.update(id, { 
       status: 'FULFILLED',
-      // Use separate fulfilledAt field instead of respondedAt
       fulfilledAt: new Date(),
     });
     
     try {
-      // Notify the hospital that a donor has responded
       if (request.hospital) {
-        const hospital = await this.hospitalService.findOne(request.hospital.id);
-        const donor = await this.donorService.findOne(request.donor.id);
+        const hospital = await this.hospitalService.findOne(request.hospitalId);
+        const donor = await this.donorService.findOne(request.donorId);
         
-        if (hospital && donor && donor.phone) {
-          // Use notification service to notify hospital
-          // Check if hospital has a contact method available
-          const hospitalContactInfo = hospital.email || '';
+        if (hospital && donor) {
+          // Check if hospital has email or contact number
+          const hospitalContactInfo = hospital.email || (hospital as any).contactNumber || '';
           
           if (hospitalContactInfo) {
-            // Create a notification message without assuming specific fields
-            const donorName = donor.name || donor.id; // Use name if available, otherwise ID
+            const donorName = donor.name || donor.id;
             
             await this.notificationService.sendSms(
               hospitalContactInfo,
-              `A donor has responded to your blood request for ${request.bloodType}. Request ID: ${request.id}`,
+              `A donor (${donorName}) has responded to your blood request for ${request.bloodType}. Request ID: ${request.id}`,
             );
+          } else {
+            this.logger.warn(`No contact information available for hospital ${hospital.id}`);
           }
         }
       }
@@ -234,17 +232,14 @@ export class BloodRequestService {
         `Hospital notification failed for request ${id}: ${error.message}`,
         error.stack,
       );
-      // Don't throw here - we still want to mark as fulfilled even if notification fails
     }
     
     return { success: true };
   }
 
-
-  // Add a method to get requests for a specific donor
   async getRequestsByDonor(donorId: string) {
     return this.bloodRequestRepository.find({
-      where: { donor: { id: donorId} },
+      where: { donorId },
       relations: {
         donor: true,
         hospital: true,
@@ -253,14 +248,13 @@ export class BloodRequestService {
     });
   }
 
-
   private calculateDistance(
     lat1: number,
     lon1: number,
     lat2: number,
     lon2: number,
   ): number {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
     

@@ -1,4 +1,3 @@
-// blood-group.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -22,7 +21,7 @@ export class BloodGroupService {
     return this.bloodGroupRepo.find();
   }
 
-  async findOne(id: string): Promise<BloodGroup> {
+  async findOne(id: number): Promise<BloodGroup> {
     const bg = await this.bloodGroupRepo.findOneBy({ id });
     if (!bg) throw new NotFoundException('Blood group not found');
     return bg;
@@ -34,13 +33,13 @@ export class BloodGroupService {
     return bg;
   }
 
-  async update(id: string, dto: UpdateBloodGroupDto): Promise<BloodGroup> {
+  async update(id: number, dto: UpdateBloodGroupDto): Promise<BloodGroup> {
     const bloodGroup = await this.findOne(id);
     Object.assign(bloodGroup, dto);
     return this.bloodGroupRepo.save(bloodGroup);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: number): Promise<void> {
     await this.bloodGroupRepo.delete(id);
   }
 }

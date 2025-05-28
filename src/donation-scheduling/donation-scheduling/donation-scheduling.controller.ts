@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req, BadRequestException, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { DonationSchedulingService } from './donation-scheduling.service';
 import { Request } from 'express';
@@ -11,9 +11,9 @@ import { Public } from 'src/auth/auth.guard';
 
 interface RequestWithUser extends Request {
   user?: {
-    id: string;
+    id: number; // Changed from string to number
     hospitalId?: string;
-    donorId?: string;
+    donorId?: number; // Changed from string to number
     role: string;
   };
 }
@@ -59,7 +59,7 @@ export class DonationSchedulingController {
   async findUpcoming(@Req() req: RequestWithUser): Promise<DonationSchedule[]> {
     // Get user information - could be hospital staff or donor
     const hospitalId = req.user?.hospitalId;
-    const donorId = req.user?.donorId;
+    const donorId = req.user?.donorId; // Now properly typed as number
     
     // Pass both IDs to the service, which will handle the logic
     return await this.donationSchedulingService.findUpcoming(hospitalId, donorId);
@@ -72,7 +72,7 @@ export class DonationSchedulingController {
   async findPast(@Req() req: RequestWithUser): Promise<DonationSchedule[]> {
     // Get user information - could be hospital staff or donor
     const hospitalId = req.user?.hospitalId;
-    const donorId = req.user?.donorId;
+    const donorId = req.user?.donorId; // Now properly typed as number
     
     return await this.donationSchedulingService.findPast(hospitalId, donorId);
   }
@@ -86,7 +86,7 @@ export class DonationSchedulingController {
     @Req() req: RequestWithUser
   ): Promise<DonationSchedule[]> {
     const hospitalId = req.user?.hospitalId;
-    const donorId = req.user?.donorId;
+    const donorId = req.user?.donorId; // Now properly typed as number
     
     return await this.donationSchedulingService.findByDate(dateString, hospitalId, donorId);
   }
@@ -101,7 +101,7 @@ export class DonationSchedulingController {
       dateRangeDto.hospitalId = req.user.hospitalId;
     }
     
-    // If user is a donor, pass the donor ID
+    // If user is a donor, pass the donor ID (now properly typed as number)
     const donorId = req.user?.donorId;
     
     return await this.donationSchedulingService.findByDateRange(dateRangeDto, donorId);
@@ -112,16 +112,16 @@ export class DonationSchedulingController {
   @ApiOperation({ summary: 'Get days with schedules for a specific month' })
   @ApiResponse({ status: 200, description: 'Return days with schedules', type: [Number] })
   async getDatesWithSchedules(
-    @Param('year') year: number,
-    @Param('month') month: number,
+    @Param('year', ParseIntPipe) year: number, // Added ParseIntPipe
+    @Param('month', ParseIntPipe) month: number, // Added ParseIntPipe
     @Req() req: RequestWithUser,
   ): Promise<number[]> {
     const hospitalId = req.user?.hospitalId;
-    const donorId = req.user?.donorId;
+    const donorId = req.user?.donorId; // Now properly typed as number
     
     return await this.donationSchedulingService.getDatesWithSchedules(
-      Number(year),
-      Number(month),
+      year, // No need to convert to Number anymore
+      month, // No need to convert to Number anymore
       hospitalId,
       donorId
     );
@@ -132,7 +132,8 @@ export class DonationSchedulingController {
   @ApiOperation({ summary: 'Get a donation schedule by id' })
   @ApiResponse({ status: 200, description: 'Return the donation schedule', type: DonationSchedule })
   @ApiResponse({ status: 404, description: 'Donation schedule not found' })
-  async findOne(@Param('id') id: string): Promise<DonationSchedule> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<DonationSchedule> {
+    // FIXED: Now using ParseIntPipe to convert string to number
     return await this.donationSchedulingService.findById(id);
   }
 
@@ -141,7 +142,7 @@ export class DonationSchedulingController {
   @ApiResponse({ status: 200, description: 'The donation schedule has been updated', type: DonationSchedule })
   @ApiResponse({ status: 404, description: 'Donation schedule not found' })
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number, // FIXED: Added ParseIntPipe
     @Body() updateDto: UpdateDonationScheduleDto,
   ): Promise<DonationSchedule> {
     return await this.donationSchedulingService.update(id, updateDto);
@@ -156,7 +157,7 @@ export class DonationSchedulingController {
     @Body() assignDto: AssignDonorDto,
     @Req() req: RequestWithUser
   ): Promise<DonationSchedule> {
-    // If user is authenticated as a donor, use their donor ID
+    // If user is authenticated as a donor, use their donor ID (now properly typed as number)
     if (req.user?.donorId && !assignDto.donorId) {
       assignDto.donorId = req.user.donorId;
     }
@@ -168,7 +169,8 @@ export class DonationSchedulingController {
   @ApiOperation({ summary: 'Delete a donation schedule' })
   @ApiResponse({ status: 200, description: 'The donation schedule has been deleted' })
   @ApiResponse({ status: 404, description: 'Donation schedule not found' })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    // FIXED: Added ParseIntPipe to convert string to number
     return await this.donationSchedulingService.remove(id);
   }
 }

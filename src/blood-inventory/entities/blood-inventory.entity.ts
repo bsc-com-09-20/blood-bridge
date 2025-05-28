@@ -1,3 +1,4 @@
+// blood-inventory.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum BloodGroup {
@@ -17,9 +18,9 @@ export enum InventoryStatus {
   CRITICAL_SHORTAGE = 'Critical Shortage'
 }
 
-@Entity()
+@Entity('blood_inventory')
 export class BloodInventory {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn('increment')
   id: number;
 
   @Column({

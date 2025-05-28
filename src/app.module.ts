@@ -19,7 +19,6 @@ import { BloodTypeModule } from './blood-type/blood-type/blood-type.module';
 import { BloodInventoryModule } from './blood-inventory/blood-inventory.module';
 import { EventsModule } from './events/events.module';
 import { Event } from './events/entities/event.entity';
-import { scheduled } from 'rxjs';
 import { DonationSchedulingModule } from './donation-scheduling/donation-scheduling/donation-scheduling.module';
 
 @Module({
@@ -28,7 +27,7 @@ import { DonationSchedulingModule } from './donation-scheduling/donation-schedul
       isGlobal: true,
       envFilePath: path.resolve(__dirname, '../.env'),
     }),
-
+    
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST,
@@ -37,9 +36,8 @@ import { DonationSchedulingModule } from './donation-scheduling/donation-schedul
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
       entities: [Donor, BloodInventory, BloodRequest, Hospital, Event],
-      synchronize: true, 
+      synchronize: false,
       autoLoadEntities: true,
-      
     }),
     
     // Feature Modules
@@ -53,7 +51,6 @@ import { DonationSchedulingModule } from './donation-scheduling/donation-schedul
     BloodTypeModule,
     EventsModule,
     DonationSchedulingModule,
-
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,3 @@
-
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -54,8 +53,14 @@ export class DonorService {
     return await query.getMany();
   }
 
-  async updateStatus(id: string, status: DonorStatus): Promise<Donor> {
-    const donor = await this.donorRepository.findOneBy({ id });
+  async updateStatus(id: string | number, status: DonorStatus): Promise<Donor> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid donor ID: ${id}`);
+    }
+
+    const donor = await this.donorRepository.findOneBy({ id: numericId });
   
     if (!donor) {
       throw new NotFoundException(`Donor with ID ${id} not found`);
@@ -65,16 +70,28 @@ export class DonorService {
     return this.donorRepository.save(donor);
   }
 
-  async findOne(id: string): Promise<Donor | null> {
-    return await this.donorRepository.findOneBy({ id });
+  async findOne(id: string | number): Promise<Donor | null> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    if (isNaN(numericId)) {
+      return null;
+    }
+
+    return await this.donorRepository.findOneBy({ id: numericId });
   }
 
   async findByEmail(email: string): Promise<Donor | null> {
     return await this.donorRepository.findOneBy({ email });
   }
 
-  async update(id: string, updateDonorDto: UpdateDonorDto): Promise<Donor> {
-    const donor = await this.donorRepository.findOneBy({ id });
+  async update(id: string | number, updateDonorDto: UpdateDonorDto): Promise<Donor> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid donor ID: ${id}`);
+    }
+
+    const donor = await this.donorRepository.findOneBy({ id: numericId });
 
     if (!donor) {
       throw new NotFoundException(`Donor with ID ${id} not found`);
@@ -89,8 +106,18 @@ export class DonorService {
     return this.donorRepository.save(donor);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.donorRepository.delete(id);
+  async remove(id: string | number): Promise<void> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid donor ID: ${id}`);
+    }
+
+    const result = await this.donorRepository.delete(numericId);
+    
+    if (result.affected === 0) {
+      throw new NotFoundException(`Donor with ID ${id} not found`);
+    }
   }
 
   // Fixed to properly handle "ALL" blood type for broadcast requests

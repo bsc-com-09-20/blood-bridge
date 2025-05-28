@@ -1,4 +1,3 @@
-// events.service.ts
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -25,63 +24,63 @@ export class EventsService {
     @InjectRepository(Registration)
     private registrationRepository: Repository<Registration>,
 
-    @InjectRepository(Donor)  // Inject Donor repository
+    @InjectRepository(Donor)
     private donorRepository: Repository<Donor>,
   ) {}
 
- async findAll(filterDto?: EventFilterDto): Promise<Event[]> {
-  const { search, isThisWeek, isWeekend, eventType, tags } = filterDto || {};
-  
-  // Build query
-  const queryBuilder = this.eventsRepository.createQueryBuilder('event');
-  
-  // Only show published events by default
-  queryBuilder.where('event.isPublished = :isPublished', { isPublished: true });
-  
-  // Important: Filter out past events by default (for "Upcoming" filter)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Start of today
-  
-  // Use CONCAT to compare date+time, or just filter by date if no specific filter is applied
-  if (!isThisWeek && !isWeekend) {
-    queryBuilder.andWhere('event.eventDate >= :today', { today });
-  }
-  
-  // Apply filters if provided
-  if (search) {
-    queryBuilder.andWhere(
-      '(event.title ILIKE :search OR event.description ILIKE :search OR event.location ILIKE :search)',
-      { search: `%${search}%` }
-    );
-  }
-  
-  if (isThisWeek === 'true') {
-    queryBuilder.andWhere('event.isThisWeek = :isThisWeek', { isThisWeek: true });
-    queryBuilder.andWhere('event.eventDate >= :today', { today }); // Only future events for This Week
-  }
-  
-  if (isWeekend === 'true') {
-    queryBuilder.andWhere('event.isWeekend = :isWeekend', { isWeekend: true });
-    queryBuilder.andWhere('event.eventDate >= :today', { today }); // Only future events for Weekend
-  }
-  
-  if (eventType) {
-    queryBuilder.andWhere('event.eventType = :eventType', { eventType });
-  }
-  
-  if (tags) {
-    const tagList = Array.isArray(tags) ? tags : [tags];
-    for (const tag of tagList) {
-      queryBuilder.andWhere(':tag = ANY(event.tags)', { tag });
+  async findAll(filterDto?: EventFilterDto): Promise<Event[]> {
+    const { search, isThisWeek, isWeekend, eventType, tags } = filterDto || {};
+    
+    // Build query
+    const queryBuilder = this.eventsRepository.createQueryBuilder('event');
+    
+    // Only show published events by default
+    queryBuilder.where('event.isPublished = :isPublished', { isPublished: true });
+    
+    // Important: Filter out past events by default (for "Upcoming" filter)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    
+    // Use CONCAT to compare date+time, or just filter by date if no specific filter is applied
+    if (!isThisWeek && !isWeekend) {
+      queryBuilder.andWhere('event.eventDate >= :today', { today });
     }
+    
+    // Apply filters if provided
+    if (search) {
+      queryBuilder.andWhere(
+        '(event.title LIKE :search OR event.description LIKE :search OR event.location LIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+    
+    if (isThisWeek === 'true') {
+      queryBuilder.andWhere('event.isThisWeek = :isThisWeek', { isThisWeek: true });
+      queryBuilder.andWhere('event.eventDate >= :today', { today }); // Only future events for This Week
+    }
+    
+    if (isWeekend === 'true') {
+      queryBuilder.andWhere('event.isWeekend = :isWeekend', { isWeekend: true });
+      queryBuilder.andWhere('event.eventDate >= :today', { today }); // Only future events for Weekend
+    }
+    
+    if (eventType) {
+      queryBuilder.andWhere('event.eventType = :eventType', { eventType });
+    }
+    
+    if (tags) {
+      const tagList = Array.isArray(tags) ? tags : [tags];
+      for (const tag of tagList) {
+        queryBuilder.andWhere('JSON_CONTAINS(event.tags, :tag)', { tag: JSON.stringify(tag) });
+      }
+    }
+    
+    // Order by date
+    queryBuilder.orderBy('event.eventDate', 'ASC')
+      .addOrderBy('event.startTime', 'ASC');
+    
+    return queryBuilder.getMany();
   }
-  
-  // Order by date
-  queryBuilder.orderBy('event.eventDate', 'ASC')
-    .addOrderBy('event.startTime', 'ASC');
-  
-  return queryBuilder.getMany();
-}
 
   async findNearbyEvents(latitude: number, longitude: number, radius: number = 10): Promise<Event[]> {
     // This is a simplified implementation
@@ -102,63 +101,68 @@ export class EventsService {
   }
 
   async findThisWeekEvents(): Promise<Event[]> {
-  const today = new Date();
-  const nextWeek = new Date(today);
-  nextWeek.setDate(today.getDate() + 7);
-  
-  return this.eventsRepository.find({
-    where: {
-      isPublished: true,
-      eventDate: Between(today, nextWeek), // This ensures only future events
-    },
-    order: { eventDate: 'ASC', startTime: 'ASC' },
-  });
-}
-
-async findWeekendEvents(): Promise<Event[]> {
-  // Get current date info
-  const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 is Sunday, 6 is Saturday
-  
-  // Calculate upcoming weekend dates
-  const nextSaturday = new Date(today);
-  const nextSunday = new Date(today);
-  
-  if (dayOfWeek === 6) { // If today is Saturday
-    nextSaturday.setDate(today.getDate());
-    nextSunday.setDate(today.getDate() + 1);
-  } else if (dayOfWeek === 0) { // If today is Sunday
-    nextSaturday.setDate(today.getDate() - 1);
-    nextSunday.setDate(today.getDate());
-  } else { // If weekday
-    nextSaturday.setDate(today.getDate() + (6 - dayOfWeek));
-    nextSunday.setDate(today.getDate() + (7 - dayOfWeek));
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    return this.eventsRepository.find({
+      where: {
+        isPublished: true,
+        eventDate: Between(today, nextWeek), // This ensures only future events
+      },
+      order: { eventDate: 'ASC', startTime: 'ASC' },
+    });
   }
-  
-  // Set time to start/end of day
-  nextSaturday.setHours(0, 0, 0, 0);
-  nextSunday.setHours(23, 59, 59, 999);
-  
-  return this.eventsRepository.find({
-    where: [
-      { 
-        isPublished: true, 
-        eventDate: Between(nextSaturday, nextSunday),
-        // This is already filtered for the upcoming weekend
-      },
-      { 
-        isPublished: true, 
-        isWeekend: true, 
-        eventDate: MoreThanOrEqual(today), // This ensures only future weekend events
-      },
-    ],
-    order: { eventDate: 'ASC', startTime: 'ASC' },
-  });
-}
 
+  async findWeekendEvents(): Promise<Event[]> {
+    // Get current date info
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 is Sunday, 6 is Saturday
+    
+    // Calculate upcoming weekend dates
+    const nextSaturday = new Date(today);
+    const nextSunday = new Date(today);
+    
+    if (dayOfWeek === 6) { // If today is Saturday
+      nextSaturday.setDate(today.getDate());
+      nextSunday.setDate(today.getDate() + 1);
+    } else if (dayOfWeek === 0) { // If today is Sunday
+      nextSaturday.setDate(today.getDate() - 1);
+      nextSunday.setDate(today.getDate());
+    } else { // If weekday
+      nextSaturday.setDate(today.getDate() + (6 - dayOfWeek));
+      nextSunday.setDate(today.getDate() + (7 - dayOfWeek));
+    }
+    
+    // Set time to start/end of day
+    nextSaturday.setHours(0, 0, 0, 0);
+    nextSunday.setHours(23, 59, 59, 999);
+    
+    return this.eventsRepository.find({
+      where: [
+        { 
+          isPublished: true, 
+          eventDate: Between(nextSaturday, nextSunday),
+          // This is already filtered for the upcoming weekend
+        },
+        { 
+          isPublished: true, 
+          isWeekend: true, 
+          eventDate: MoreThanOrEqual(today), // This ensures only future weekend events
+        },
+      ],
+      order: { eventDate: 'ASC', startTime: 'ASC' },
+    });
+  }
 
-  async findOne(id: string): Promise<Event> {
-    const event = await this.eventsRepository.findOne({ where: { id } });
+  async findOne(id: string | number): Promise<Event> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid event ID: ${id}`);
+    }
+
+    const event = await this.eventsRepository.findOne({ where: { id: numericId } });
     
     if (!event) {
       throw new NotFoundException(`Event with ID ${id} not found`);
@@ -194,7 +198,7 @@ async findWeekendEvents(): Promise<Event[]> {
     }
   }
 
-  async update(id: string, updateEventDto: UpdateEventDto): Promise<Event> {
+  async update(id: string | number, updateEventDto: UpdateEventDto): Promise<Event> {
     const event = await this.findOne(id);
     
     // Check if event dates are being updated
@@ -216,8 +220,14 @@ async findWeekendEvents(): Promise<Event[]> {
     return this.eventsRepository.save(event);
   }
 
-  async remove(id: string): Promise<void> {
-    const result = await this.eventsRepository.delete(id);
+  async remove(id: string | number): Promise<void> {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    if (isNaN(numericId)) {
+      throw new NotFoundException(`Invalid event ID: ${id}`);
+    }
+
+    const result = await this.eventsRepository.delete(numericId);
     
     if (result.affected === 0) {
       throw new NotFoundException(`Event with ID ${id} not found`);
@@ -237,38 +247,61 @@ async findWeekendEvents(): Promise<Event[]> {
       { status: 'ongoing' }
     );
     
-    // Update completed events
+    // Update completed events - MySQL compatible version
     await this.eventsRepository.createQueryBuilder()
       .update(Event)
       .set({ status: 'completed' })
       .where('eventDate < :date', { date: now })
-      .andWhere('CONCAT(eventDate, \' \', endTime)::timestamp < :now', { now })
+      .andWhere('TIMESTAMP(CONCAT(eventDate, \' \', endTime)) < :now', { now })
       .andWhere('status != :status', { status: 'cancelled' })
       .execute();
   }
+
   async registerForEvent(registerEventDto: RegisterEventDto): Promise<Event> {
     const { eventId, donorId } = registerEventDto;
   
     this.logger.log(`Donor ${donorId} is attempting to register for event ${eventId}`);
   
     try {
-      const event = await this.eventsRepository.findOne({ where: { id: eventId } });
-      const donor = await this.donorRepository.findOne({ where: { id: donorId } });
+      // Convert string IDs to numbers if they're passed as strings from the controller
+      const eventIdNum = typeof eventId === 'string' ? parseInt(eventId, 10) : eventId;
+      const donorIdNum = typeof donorId === 'string' ? parseInt(donorId, 10) : donorId;
+
+      // Validate numeric conversion
+      if (isNaN(eventIdNum) || isNaN(donorIdNum)) {
+        throw new BadRequestException('Invalid event ID or donor ID');
+      }
+
+      const event = await this.eventsRepository.findOne({ where: { id: eventIdNum } });
+      const donor = await this.donorRepository.findOne({ where: { id: donorIdNum } });
 
       // Check if event and donor exist
       if (!event) {
-        this.logger.error(`Event with ID ${eventId} not found`);
+        this.logger.error(`Event with ID ${eventIdNum} not found`);
         throw new NotFoundException('Event not found');
       }
   
       if (!donor) {
-        this.logger.error(`Donor with ID ${donorId} not found`);
+        this.logger.error(`Donor with ID ${donorIdNum} not found`);
         throw new NotFoundException('Donor not found');
+      }
+  
+      // Check if donor is already registered for this event
+      const existingRegistration = await this.registrationRepository.findOne({
+        where: { 
+          event: { id: eventIdNum },
+          donor: { id: donorIdNum }
+        }
+      });
+
+      if (existingRegistration) {
+        this.logger.error(`Donor ${donorIdNum} is already registered for event ${eventIdNum}`);
+        throw new BadRequestException('You are already registered for this event');
       }
   
       // Check if event has available spots
       if (event.availableSpots <= 0) {
-        this.logger.error(`No available spots for event ${eventId}`);
+        this.logger.error(`No available spots for event ${eventIdNum}`);
         throw new BadRequestException('No available spots for this event');
       }
   
@@ -287,13 +320,15 @@ async findWeekendEvents(): Promise<Event[]> {
   
       // Save the updated event entity to the database
       await this.eventsRepository.save(event);
-      this.logger.log(`Donor ${donorId} successfully registered for event ${eventId}`);
+      this.logger.log(`Donor ${donorIdNum} successfully registered for event ${eventIdNum}`);
   
       return event;
     } catch (error) {
       this.logger.error(`Registration failed: ${error.message}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException('Could not register for the event');
     }
   }
 }
-

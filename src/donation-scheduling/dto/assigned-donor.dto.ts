@@ -1,14 +1,15 @@
-// donation-scheduling.dto.ts
-import { IsNotEmpty, IsString, IsInt, IsBoolean, IsOptional, IsDateString, Min, IsUUID, Matches } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+// assigned-donor.dto.ts
+import { IsNumber, IsNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+
 export class AssignDonorDto {
-    @ApiProperty({ description: 'Donor ID', example: '123e4567-e89b-12d3-a456-426614174000' })
-    @IsNotEmpty()
-    @IsUUID()
-    donorId: string;
-  
-    @ApiProperty({ description: 'Donation Schedule ID', example: '123e4567-e89b-12d3-a456-426614174000' })
-    @IsNotEmpty()
-    @IsUUID()
-    scheduleId: string;
-  }
+  @ApiProperty({ description: 'Schedule ID to assign donor to', type: 'number' })
+  @IsNumber()
+  @IsNotEmpty()
+  scheduleId: number; // Ensure this is number
+
+  @ApiProperty({ description: 'Donor ID to assign', type: 'number' })
+  @IsNumber()
+  @IsNotEmpty()
+  donorId: number; // Ensure this is number
+}

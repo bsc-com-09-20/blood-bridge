@@ -1,3 +1,4 @@
+// donation-scheduling.service.ts - Fixed version
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThan, MoreThanOrEqual } from 'typeorm';
@@ -39,7 +40,8 @@ export class DonationSchedulingService {
     });
   }
 
-  async findById(id: string): Promise<DonationSchedule> {
+  // FIXED: Changed parameter from string to number
+  async findById(id: number): Promise<DonationSchedule> {
     const schedule = await this.donationScheduleRepository.findOne({ where: { id } });
     if (!schedule) {
       throw new NotFoundException(`Donation schedule with ID ${id} not found`);
@@ -47,7 +49,7 @@ export class DonationSchedulingService {
     return schedule;
   }
 
-  async findByDate(date: string, hospitalId?: string, donorId?: string): Promise<DonationSchedule[]> {
+  async findByDate(date: string, hospitalId?: string, donorId?: number): Promise<DonationSchedule[]> {
     const targetDate = new Date(date);
     // Set time to start of day
     targetDate.setHours(0, 0, 0, 0);
@@ -76,7 +78,7 @@ export class DonationSchedulingService {
     });
   }
 
-  async findByDateRange(dateRangeDto: DateRangeDto, donorId?: string): Promise<DonationSchedule[]> {
+  async findByDateRange(dateRangeDto: DateRangeDto, donorId?: number): Promise<DonationSchedule[]> {
     const { startDate, endDate, hospitalId } = dateRangeDto;
     
     const startDateTime = new Date(startDate);
@@ -106,7 +108,7 @@ export class DonationSchedulingService {
     });
   }
 
-  async findUpcoming(hospitalId?: string, donorId?: string): Promise<DonationSchedule[]> {
+  async findUpcoming(hospitalId?: string, donorId?: number): Promise<DonationSchedule[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -132,7 +134,7 @@ export class DonationSchedulingService {
     });
   }
 
-  async findPast(hospitalId?: string, donorId?: string): Promise<DonationSchedule[]> {
+  async findPast(hospitalId?: string, donorId?: number): Promise<DonationSchedule[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -157,7 +159,8 @@ export class DonationSchedulingService {
     });
   }
 
-  async update(id: string, updateDto: UpdateDonationScheduleDto): Promise<DonationSchedule> {
+  // FIXED: Changed parameter from string to number
+  async update(id: number, updateDto: UpdateDonationScheduleDto): Promise<DonationSchedule> {
     const schedule = await this.findById(id);
     
     // Update scheduledDate properly if provided
@@ -173,7 +176,10 @@ export class DonationSchedulingService {
 
   async assignDonor(assignDto: AssignDonorDto): Promise<DonationSchedule> {
     const { scheduleId, donorId } = assignDto;
-    const schedule = await this.findById(scheduleId);
+    
+    // FIXED: Parse scheduleId to number if it's coming as string
+    const numericScheduleId = typeof scheduleId === 'string' ? parseInt(scheduleId, 10) : scheduleId;
+    const schedule = await this.findById(numericScheduleId);
     
     // Validate that donorId is provided
     if (!donorId) {
@@ -198,12 +204,13 @@ export class DonationSchedulingService {
     return await this.donationScheduleRepository.save(schedule);
   }
 
-  async remove(id: string): Promise<void> {
+  // FIXED: Changed parameter from string to number
+  async remove(id: number): Promise<void> {
     const schedule = await this.findById(id);
     await this.donationScheduleRepository.remove(schedule);
   }
   
-  async getDatesWithSchedules(year: number, month: number, hospitalId?: string, donorId?: string): Promise<number[]> {
+  async getDatesWithSchedules(year: number, month: number, hospitalId?: string, donorId?: number): Promise<number[]> {
     // Create date range for the month
     const startDate = new Date(year, month - 1, 1); // Month is 0-indexed in JS Date
     const endDate = new Date(year, month, 0); // Last day of the month

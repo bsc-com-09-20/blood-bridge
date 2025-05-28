@@ -1,5 +1,4 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { Point } from 'geojson';
 
 @Entity()
 export class Hospital {
@@ -15,23 +14,22 @@ export class Hospital {
   @Column({ select: false })
   password: string;
 
-  // Add location as GeoJSON Point
+  // Option 1: Use MySQL POINT type (recommended for spatial queries)
   @Column({
-    type: 'geography',
+    type: 'point',
     spatialFeatureType: 'Point',
     srid: 4326,
     nullable: true
   })
-  location: Point;
+  location: string; // MySQL POINT is stored as string
 
-  // Keep these for backward compatibility or if needed elsewhere
-  @Column({ type: 'float', nullable: true })
+  // Option 2: Use separate latitude/longitude columns (simpler approach)
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
   latitude: number;
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
   longitude: number;
 
-  // Add any other fields your Hospital entity might need
   @Column({ type: 'timestamp', nullable: true })
   lastActive: Date;
 }

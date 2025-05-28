@@ -1,9 +1,10 @@
+// blood-request.entity.ts
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Donor } from '../../donor/entities/donor.entity';
 import { Hospital } from '../../hospital/entities/hospital.entity';
 import { BloodType } from '../../common/enums/blood-type.enum';
 
-@Entity()
+@Entity('blood_requests')
 export class BloodRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -12,14 +13,14 @@ export class BloodRequest {
   @JoinColumn({ name: 'hospitalId' })
   hospital: Hospital;
 
-  @Column()
-  hospitalId: number;
+  @Column({ type: 'varchar' })
+  hospitalId: string;
 
   @ManyToOne(() => Donor)
   @JoinColumn({ name: 'donorId' })
   donor: Donor;
 
-  @Column()
+  @Column({ type: 'varchar' })
   donorId: string;
 
   @Column({
@@ -28,31 +29,31 @@ export class BloodRequest {
   })
   bloodType: BloodType;
 
-  @Column('int')
+  @Column({ type: 'int' })
   quantity: number;
 
-  @Column('float')
+  @Column({ type: 'decimal', precision: 8, scale: 2 })
   distanceKm: number;
 
   @Column({ type: 'timestamp', nullable: true })
   cancelledAt: Date | null;
 
   @Column({
-    default: 'pending',
-    enum: ['pending', 'accepted', 'rejected', 'fulfilled']
+    type: 'enum',
+    enum: ['PENDING', 'ACTIVE', 'FULFILLED', 'CANCELLED'],
+    default: 'PENDING'
   })
   status: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   notificationSent: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   notificationSentAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   fulfilledAt: Date;
-
 }

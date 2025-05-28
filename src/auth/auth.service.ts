@@ -65,7 +65,7 @@ export class AuthService {
       }
 
       const payload: AuthPayload = {
-        id: donor.id,
+        id: String(donor.id),
         email: donor.email,
         role: 'donor',
       };
