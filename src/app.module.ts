@@ -40,7 +40,7 @@ import { DonationSchedulingModule } from './donation-scheduling/donation-schedul
       synchronize: true, 
       autoLoadEntities: true,
       ssl: {
-        rejectUnauthorized: false  // Add this for Render.com
+        rejectUnauthorized: false  
       },
       
     }),
