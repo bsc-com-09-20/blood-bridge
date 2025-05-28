@@ -39,6 +39,9 @@ import { DonationSchedulingModule } from './donation-scheduling/donation-schedul
       entities: [Donor, BloodInventory, BloodRequest, Hospital, Event],
       synchronize: true, 
       autoLoadEntities: true,
+      ssl: {
+        rejectUnauthorized: false  // Add this for Render.com
+      },
       
     }),
     
