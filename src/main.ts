@@ -6,44 +6,49 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Strip unknown properties
-      forbidNonWhitelisted: true, // <-- allow extra props like 'role'
-      transform: true,
-    }),
-  );
-  
-  //app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Configure Swagger options
-  const config = new DocumentBuilder()
-    .setTitle('Blood-bridge')
-    .setDescription('This is blood bridge api')
-    .setVersion('1.0')
-    .addTag('api') // Optional: group endpoints by tag
-    .build();
-  app.enableCors(
-    {
-      origin: '*',
-    }
-  );
+  // Global Validation Pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      transform: true,
       forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Helps with query/param conversion
+        enableImplicitConversion: true,
       },
     }),
   );
 
-  
+  // Enable CORS
+  app.enableCors({
+    origin: '*',
+  });
+
+  // Swagger Configuration with Bearer Authentication
+  const config = new DocumentBuilder()
+    .setTitle('Blood-bridge')
+    .setDescription('This is blood bridge api')
+    .setVersion('1.0')
+    .addTag('api')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Enter JWT token in format: Bearer <token>',
+        in: 'header',
+      },
+      'access-token', // <-- must match name used in @ApiBearerAuth()
+    )
+    .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3005, '0.0.0.0');
+  const PORT = process.env.DATABASE_PORT ?? '5432';
+
+  await app.listen(PORT);
 }
+
 bootstrap();

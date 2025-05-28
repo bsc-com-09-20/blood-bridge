@@ -7,9 +7,11 @@ import { JwtStrategy } from './jwt.strategy';
 import { Donor } from 'src/donor/entities/donor.entity';
 import { Hospital } from 'src/hospital/entities/hospital.entity';
 import { AuthController } from './auth.controller';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
+    MailModule,
     TypeOrmModule.forFeature([Donor, Hospital]), // Add this line
     JwtModule.register({
       secret: 'your-secret-key', 

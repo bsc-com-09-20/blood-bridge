@@ -1,9 +1,12 @@
-import { Injectable } from '@nestjs/common';
+/*import { Injectable } from '@nestjs/common';
 import { CreateSettingDto } from './dto/create-setting.dto';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 
 @Injectable()
 export class SettingsService {
+  findByDonorId(arg0: number) {
+    throw new Error('Method not implemented.');
+  }
   create(createSettingDto: CreateSettingDto) {
     return 'This action adds a new setting';
   }
@@ -23,4 +26,4 @@ export class SettingsService {
   remove(id: number) {
     return `This action removes a #${id} setting`;
   }
-}
+}*/

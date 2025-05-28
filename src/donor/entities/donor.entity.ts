@@ -49,4 +49,11 @@ export class Donor {
 
   @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
+
+  
+@Column({ type: 'varchar', length: 255, nullable: true })
+resetToken: string | null;
+
+@Column({ type: 'timestamp', nullable: true })
+resetTokenExpires: Date | null;
 }
