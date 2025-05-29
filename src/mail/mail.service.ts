@@ -14,22 +14,31 @@ export class MailService {
   private initializeTransporter() {
     try {
       const host = this.configService.get<string>('MAIL_HOST');
-      const port = this.configService.get<number>('MAIL_PORT');
+      const port = parseInt(this.configService.get<string>('MAIL_PORT') || '587');
       const user = this.configService.get<string>('MAIL_USER');
       const pass = this.configService.get<string>('MAIL_PASSWORD');
       
+      // Validate required configuration
+      if (!host || !user || !pass) {
+        throw new Error('Missing required mail configuration: MAIL_HOST, MAIL_USER, or MAIL_PASSWORD');
+      }
+      
       this.logger.log(`Initializing mail service with host: ${host}, port: ${port}, user: ${user}`);
+      this.logger.log(`Password length: ${pass.length} characters`);
 
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         host: host,
         port: port,
-        secure: port === 465,
+        secure: port === 465, // true for 465, false for other ports
         auth: {
           user: user,
           pass: pass,
         },
+        // Remove or modify TLS settings for Gmail
         tls: {
-          rejectUnauthorized: false,
+          // Don't fail on invalid certs for Gmail
+          rejectUnauthorized: true,
+          ciphers: 'SSLv3'
         },
         debug: true,
         logger: true
@@ -67,8 +76,10 @@ export class MailService {
       // Alternative format that might work better on some devices
       const universalLink = `https://bloodbridge.app/reset-password?token=${resetToken}`;
       
+      const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER') || 'noreply@bloodbridge.app';
+      
       const mailOptions = {
-        from: `"Blood Bridge" <${this.configService.get('MAIL_FROM') || this.configService.get('MAIL_USER')}>`,
+        from: `"Blood Bridge" <${fromEmail}>`,
         to: to,
         subject: 'Blood Bridge - Password Reset Request',
         html: `
@@ -164,8 +175,10 @@ The Blood Bridge Team
 
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
     try {
+      const fromEmail = this.configService.get<string>('MAIL_FROM') || this.configService.get<string>('MAIL_USER') || 'noreply@bloodbridge.app';
+      
       const mailOptions = {
-        from: `"Blood Bridge" <${this.configService.get('MAIL_FROM') || this.configService.get('MAIL_USER')}>`,
+        from: `"Blood Bridge" <${fromEmail}>`,
         to: to,
         subject: 'Welcome to Blood Bridge! 🩸',
         html: `
