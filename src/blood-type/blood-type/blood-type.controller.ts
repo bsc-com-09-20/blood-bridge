@@ -1,5 +1,5 @@
-// blood-group.controller.ts
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+// 2. Fix blood-type.controller.ts
+import { Controller, Get, Post, Body, Param, Put, Delete, ParseIntPipe } from '@nestjs/common';
 import { Public } from 'src/auth/auth.guard';
 import { BloodGroupService } from './blood-type.service';
 import { UpdateBloodGroupDto } from './dto/update-blood-group.dto';
@@ -21,7 +21,7 @@ export class BloodGroupController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) { // Use ParseIntPipe to convert string to number
     return this.bloodGroupService.findOne(id);
   }
 
@@ -31,12 +31,12 @@ export class BloodGroupController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateBloodGroupDto) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateBloodGroupDto) {
     return this.bloodGroupService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.bloodGroupService.remove(id);
   }
 }

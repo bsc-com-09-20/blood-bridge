@@ -1,16 +1,16 @@
+// donor.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Point } from 'geojson';
 import { DonorStatus } from 'src/common/enums/donor-status.enum';
 
-@Entity()
+@Entity('donors')
 export class Donor {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn('increment')
+  id: number;
 
-  @Column({ length: 100 })
+  @Column({ type: 'varchar', length: 100 })
   name: string;
 
-  @Column({ length: 10 }) // e.g., O+, A-, B+, etc.
+  @Column({ type: 'varchar', length: 10 })
   bloodGroup: string;
 
   @Column({ type: 'date', nullable: true })
@@ -19,25 +19,24 @@ export class Donor {
   @Column({ type: 'int', nullable: true, default: 0 })
   donations?: number;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 
-  @Column({ length: 15 })
+  @Column({ type: 'varchar', length: 15 })
   phone: string;
 
-  @Column({ nullable: true, select: false })
+  @Column({ type: 'varchar', length: 255, nullable: true, select: false })
   password?: string;
 
-  @Column('float', { nullable: true })
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
   latitude: number;
 
-  @Column('float', { nullable: true })
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
   longitude: number;
 
   @Column({ type: 'timestamp', nullable: true })
   lastActive: Date;
 
-  // Add status column with default value
   @Column({
     type: 'enum',
     enum: DonorStatus,
@@ -45,10 +44,10 @@ export class Donor {
   })
   status: DonorStatus;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
   updatedAt: Date;
 
   

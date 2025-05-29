@@ -35,7 +35,12 @@ export class DonorService {
   }
 
   async findOne(id: string): Promise<Donor | null> {
-    const donor = await this.donorRepository.findOne({ where: { id } });
+    // Convert string to number if your ID is numeric, or ensure your entity uses string ID
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      return null;
+    }
+    const donor = await this.donorRepository.findOne({ where: { id: numericId } });
     return donor ?? null;
   }
 
@@ -59,25 +64,30 @@ export class DonorService {
   }
 
   // Update the DonorService method
-async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto): Promise<boolean> {
-  const donor = await this.findOne(id);
-  if (!donor) return false;
-  
-  // No longer verifying the old password
-  
-  const salt = await bcrypt.genSalt();
-  const hashedPassword = await bcrypt.hash(updatePasswordDto.newPassword, salt);
-  
-  donor.password = hashedPassword;
-  await this.donorRepository.save(donor);
-  return true;
-}
+  async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto): Promise<boolean> {
+    const donor = await this.findOne(id);
+    if (!donor) return false;
+    
+    // No longer verifying the old password
+    
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(updatePasswordDto.newPassword, salt);
+    
+    donor.password = hashedPassword;
+    await this.donorRepository.save(donor);
+    return true;
+  }
 
   async remove(id: string): Promise<boolean> {
     const donor = await this.findOne(id);
     if (!donor) return false;
     
-    await this.donorRepository.delete(id);
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      return false;
+    }
+    
+    await this.donorRepository.delete(numericId);
     return true;
   }
 
@@ -99,8 +109,13 @@ async updatePassword(id: string, updatePasswordDto: UpdatePasswordDto): Promise<
       throw new UnauthorizedException('Invalid password');
     }
     
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      return false;
+    }
+    
     // Proceed with account deletion
-    const result = await this.donorRepository.delete(id);
+    const result = await this.donorRepository.delete(numericId);
     return result.affected !== null && result.affected !== undefined && result.affected > 0;
   }
 

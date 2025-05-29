@@ -4,18 +4,18 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 
 @Entity('blood_group')
 export class BloodGroup {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn('increment')
+  id: number;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', length: 10, unique: true })
   bloodGroup: string; // e.g., A+, O-, AB+
 
-  @Column('text')
+  @Column({ type: 'text' })
   description: string;
 
-  @Column('text')
+  @Column({ type: 'text' })
   canDonateTo: string;
 
-  @Column('text')
+  @Column({ type: 'text' })
   canReceiveFrom: string;
 }

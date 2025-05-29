@@ -1,11 +1,24 @@
-// events.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, InternalServerErrorException, Logger, BadRequestException, Query } from '@nestjs/common';
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Body, 
+  Patch, 
+  Param, 
+  Delete, 
+  HttpCode, 
+  HttpStatus, 
+  InternalServerErrorException, 
+  Logger, 
+  BadRequestException, 
+  Query 
+} from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { Event } from './entities/event.entity';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventFilterDto } from './dto/event-filter.dto';
-import { RegisterEventDto } from './dto/register-event.dto';  // <-- Import the DTO for registration
+import { RegisterEventDto } from './dto/register-event.dto';
 import { Public } from 'src/auth/auth.guard';
 
 @Controller('events')
@@ -23,12 +36,20 @@ export class EventsController {
 
   @Get('nearby')
   async findNearbyEvents(
-    @Query('lat') latitude: number,
-    @Query('lng') longitude: number,
-    @Query('radius') radius: number = 10,
+    @Query('lat') latitude: string,
+    @Query('lng') longitude: string,
+    @Query('radius') radius: string = '10',
   ): Promise<Event[]> {
-    this.logger.log(`Finding nearby events at coordinates: (${latitude}, ${longitude}), radius: ${radius}`);
-    return this.eventsService.findNearbyEvents(latitude, longitude, radius);
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const rad = parseFloat(radius);
+
+    if (isNaN(lat) || isNaN(lng) || isNaN(rad)) {
+      throw new BadRequestException('Invalid latitude, longitude, or radius values');
+    }
+
+    this.logger.log(`Finding nearby events at coordinates: (${lat}, ${lng}), radius: ${rad}`);
+    return this.eventsService.findNearbyEvents(lat, lng, rad);
   }
 
   @Get('this-week')
@@ -143,33 +164,22 @@ export class EventsController {
     this.logger.log(`User ${donorId} is attempting to register for event ${eventId}`);
 
     try {
-      const event = await this.eventsService.findOne(eventId);
-      
-      // Check if event exists
-      if (!event) {
-        this.logger.error(`Event with ID ${eventId} not found`);
-        throw new BadRequestException('Event not found');
+      // Validate that both IDs are provided
+      if (!eventId || !donorId) {
+        throw new BadRequestException('Both eventId and donorId are required');
       }
 
-      // Check if event has available spots
-      if (event.availableSpots <= 0) {
-        this.logger.error(`No available spots for event ${eventId}`);
-        throw new BadRequestException('No available spots for this event');
-      }
-
-      // Register the user and update available spots
-      event.registeredCount += 1;
-      event.availableSpots -= 1;
-
-      // Optionally, you can also track the user registration in a separate table if necessary
-      // For example, creating a "registrations" table where userId and eventId are saved.
-
-      await this.eventsService.update(eventId, event);
+      const event = await this.eventsService.registerForEvent(registerEventDto);
       this.logger.log(`User ${donorId} successfully registered for event ${eventId}`);
       
       return event;
     } catch (error) {
       this.logger.error(`Registration failed: ${error.message}`, error.stack);
+      
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      
       throw new InternalServerErrorException('Could not register for the event');
     }
   }
