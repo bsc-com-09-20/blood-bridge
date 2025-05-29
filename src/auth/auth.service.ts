@@ -236,16 +236,12 @@ export class AuthService {
       
       await this.donorRepo.save(donor);
       
-      // In mail.service.ts, update the reset URL generation
-      const baseUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-      const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`;
+      this.logger.log(`Generated reset token for ${email}`);
       
-      this.logger.log(`Reset password link for ${email}: ${resetUrl}`);
-      
-      // Use the mail service to send the password reset email
+      // Use the mail service to send the password reset email with deep link
       await this.mailService.sendPasswordResetEmail(donor.email, resetToken, donor.name);
       
-      this.logger.log(`Password reset email sent to ${email}`);
+      this.logger.log(`Password reset email with deep link sent to ${email}`);
     } catch (error) {
       this.logger.error(`Error sending password reset email: ${error.message}`, error.stack);
       throw new Error('Failed to send password reset email');
